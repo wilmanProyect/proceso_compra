@@ -1,0 +1,41 @@
+<% const tec = p.tipo_solicitud === 'EQUIPO_TECNOLOGICO'; %>
+<dl class="datos">
+  <div><dt>Solicitante</dt><dd><%= p.solicitante_nombre %></dd></div>
+  <div><dt>Departamento</dt><dd><%= p.departamento_nombre || '—' %></dd></div>
+  <div><dt>Fecha</dt><dd><%= fmt.fecha(p.fecha_solicitud) %></dd></div>
+  <div><dt>Tipo</dt><dd><%= C.TIPOS_SOLICITUD[p.tipo_solicitud] %></dd></div>
+  <div><dt>Requiere orden de compra</dt><dd><%= p.requiere_oc ? 'Sí (crítico / activo fijo)' : 'No' %></dd></div>
+  <% if (p.monto_estimado) { %><div><dt>Monto estimado</dt><dd>Bs <%= fmt.dinero(p.monto_estimado) %></dd></div><% } %>
+  <% if (tec && p.area_receptora) { %><div><dt>Área receptora</dt><dd><%= p.area_receptora %></dd></div><% } %>
+</dl>
+<% if (tec && p.motivo) { %><h3 style="margin-top:1rem">Motivo</h3><p class="pre"><%= p.motivo %></p><% } %>
+
+<h3 style="margin-top:1.2rem">Lo que se pide</h3>
+<div class="tabla-wrap">
+  <table class="tabla">
+    <thead><tr>
+      <th>#</th><th><%= tec ? 'Equipo / componente' : 'Descripción' %></th>
+      <% if (tec) { %><th>Especificaciones</th><th>Proveedor</th><th>Contacto</th><% } else { %><th>N° parte</th><% } %>
+      <th class="right">Cantidad</th><th>Unidad</th>
+      <% if (!tec) { %><th>Destino</th><th>Observaciones</th><% } %>
+    </tr></thead>
+    <tbody>
+      <% p.items.forEach((it) => { %>
+        <tr>
+          <td><%= it.nro %></td><td class="pre"><%= it.descripcion %></td>
+          <% if (tec) { %><td class="pre"><%= it.especificaciones %></td><td><%= it.proveedor_sugerido %></td><td><%= it.contacto %></td>
+          <% } else { %><td><%= it.nro_parte %></td><% } %>
+          <td class="right"><%= fmt.cantidad(it.cantidad) %></td><td><%= it.unidad %></td>
+          <% if (!tec) { %><td><%= it.destino %></td><td><%= it.observaciones %></td><% } %>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% if (p.comentarios) { %><p class="small pre" style="margin-top:.8rem"><strong>Comentarios:</strong> <%= p.comentarios %></p><% } %>
+
+<div class="firmas">
+  <%- include('_firma', { clave: `${docSolicitud}.SOLICITADO`, etiqueta: 'Solicitado por' }) %>
+  <%- include('_firma', { clave: `${docSolicitud}.AUTORIZADO`, etiqueta: 'Autorizado por' }) %>
+  <%- include('_firma', { clave: `${docSolicitud}.RECIBIDO`, etiqueta: 'Recibido por' }) %>
+</div>

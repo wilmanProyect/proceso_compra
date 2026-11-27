@@ -1,0 +1,50 @@
+<%
+  const base = `/procesos/${p.id}`;
+  const esServicio = p.tipo_solicitud === 'SERVICIO';
+  const notas = p.eventos.filter((e) => e.accion === 'Seguimiento');
+  const mostrarRegistro = !esServicio && (acciones.editarRecepcion || p.rec_fecha || ['EN_ALMACEN', 'CERRADO'].includes(p.estado));
+%>
+<% if (esServicio) { %>
+  <%- include('_subtareas', { enCurso: p.estado === 'EN_SEGUIMIENTO', lista: [
+    ['Hacer seguimiento y cerrar cuando el servicio concluya', 'Responsable de Compras', p.estado === 'CERRADO'],
+  ] }) %>
+  <% if (acciones.cerrarServicio) { %>
+    <div class="trabajo" id="trabajo">
+      <h3><%- icono('arrow-right') %> ¿El servicio ya concluyó?</h3>
+      <form method="post" action="<%= base %>/cerrar-servicio" class="grid">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div><label for="c-cs">Describe cómo concluyó el servicio</label><textarea id="c-cs" name="comentario" required></textarea></div>
+        <div><button class="btn grande" data-confirm="¿Cerrar el proceso del servicio?"><%- icono('check') %> Cerrar proceso</button></div>
+      </form>
+    </div>
+  <% } %>
+  <% if (p.cierre_comentario) { %><div class="alert ok"><strong>Servicio concluido:</strong> <span class="pre"><%= p.cierre_comentario %></span></div><% } %>
+<% } else { %>
+  <%- include('_subtareas', { enCurso: p.estado === 'EN_SEGUIMIENTO', lista: [
+    ['Registrar la inspección y recepción cuando llegue el material', 'Responsable de Compras', !!p.firmas['RECEPCION.RECEPCIONADO']],
+  ] }) %>
+
+  <% if (acciones.editarRecepcion) { %>
+    <div id="trabajo" class="alert info">Cuando llegue el material, revísalo y completa este registro. Al registrarlo pasa directo a emitir la nota de entrega. Adjunta la factura o recibo en <strong>Adjuntos</strong> (abajo).</div>
+  <% } %>
+<% } %>
+
+<% if (acciones.seguimiento || notas.length) { %>
+  <fieldset>
+    <legend><%- icono('notebook-pen') %> Seguimiento</legend>
+    <% if (notas.length) { %>
+      <ul class="historial" style="margin-bottom:.8rem">
+        <% notas.forEach((e) => { %><li><div class="coment" style="margin-top:0"><%= e.comentario %></div><div class="cuando"><%= e.usuario_nombre %> · <%= fmt.fechaHora(e.fecha) %></div></li><% }) %>
+      </ul>
+    <% } %>
+    <% if (acciones.seguimiento) { %>
+      <form method="post" action="<%= base %>/seguimiento" class="btn-row">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="paso" value="4">
+        <input type="text" name="comentario" aria-label="Nota de seguimiento" placeholder="Ej.: el proveedor confirma despacho el viernes" required style="flex:1;min-width:220px">
+        <button class="btn sec">Agregar nota</button>
+      </form>
+    <% } %>
+  </fieldset>
+<% } %>
+
+<% if (mostrarRegistro) { %><%- include('_recepcion') %><% } %>

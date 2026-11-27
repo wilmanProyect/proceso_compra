@@ -1,0 +1,37 @@
+<div class="page-head">
+  <div><h1>Procesos de compra</h1>
+    <p class="muted small">
+      <% if (puede('procesos.ver_todos')) { %>Visualiza los procesos de todas las unidades de negocio.
+      <% } else if (puede('procesos.ver_unidades')) { %>Visualiza los procesos de sus unidades de negocio asignadas.
+      <% } else { %>Visualiza los procesos que usted creó.<% } %>
+    </p>
+  </div>
+  <% if (puede('procesos.crear')) { %><a class="btn" href="/procesos/nuevo">+ Nueva solicitud</a><% } %>
+</div>
+
+<nav class="tabs" aria-label="Vistas">
+  <a href="/procesos" class="<%= vista === 'todos' ? 'activo' : '' %>">Todos</a>
+  <a href="/procesos?vista=pendientes" class="<%= vista === 'pendientes' ? 'activo' : '' %>">Pendientes de mi acción</a>
+  <a href="/procesos?vista=mios" class="<%= vista === 'mios' ? 'activo' : '' %>">Mis solicitudes</a>
+</nav>
+
+<form class="filtros" method="get" action="/procesos">
+  <input type="hidden" name="vista" value="<%= vista %>">
+  <div><label for="q">Buscar</label><input type="text" id="q" name="q" value="<%= filtros.q %>" placeholder="Código, ítem o solicitante"></div>
+  <% if (unidades.length > 1) { %>
+  <div><label for="unidad">Unidad de negocio</label>
+    <select id="unidad" name="unidad"><option value="">Todas</option>
+      <% unidades.forEach((u) => { %><option value="<%= u.id %>" <%= filtros.unidad === u.id ? 'selected' : '' %>><%= u.nombre %></option><% }) %>
+    </select></div>
+  <% } %>
+  <div><label for="estado">Estado</label>
+    <select id="estado" name="estado"><option value="">Todos</option>
+      <% Object.entries(C.ESTADOS).forEach(([k, e]) => { %><option value="<%= k %>" <%= filtros.estado === k ? 'selected' : '' %>><%= e.nombre %></option><% }) %>
+    </select></div>
+  <div><label for="gestion">Gestión</label><input type="number" id="gestion" name="gestion" value="<%= filtros.gestion || '' %>" min="2020" max="2100" style="width:110px"></div>
+  <div><button class="btn sec" type="submit">Filtrar</button></div>
+</form>
+
+<section class="card">
+  <%- include('../partials/tabla-procesos', { procesos }) %>
+</section>

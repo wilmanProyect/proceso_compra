@@ -1,0 +1,28 @@
+<% const r = registro; const unidadesSel = (r.unidades || []).map(Number); %>
+<div class="page-head"><div><h1><%= title %></h1></div><a class="btn sec" href="/admin/usuarios">Volver</a></div>
+<form method="post" action="<%= r.id ? `/admin/usuarios/${r.id}` : '/admin/usuarios/nuevo' %>" class="card">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="grid g2">
+    <div><label for="nombre">Nombre completo</label><input type="text" id="nombre" name="nombre" value="<%= r.nombre || '' %>" required></div>
+    <div><label for="usuario">Usuario (para iniciar sesión)</label><input type="text" id="usuario" name="usuario" value="<%= r.usuario || '' %>" required pattern="[a-zA-Z0-9._\-]{3,60}" autocomplete="off"></div>
+    <div><label for="cargo">Cargo</label><input type="text" id="cargo" name="cargo" value="<%= r.cargo || '' %>" placeholder="Ej.: Coordinadora de Administración"></div>
+    <div><label for="email">Correo electrónico</label><input type="email" id="email" name="email" value="<%= r.email || '' %>"></div>
+    <div><label for="rol_id">Rol</label>
+      <select id="rol_id" name="rol_id" required><option value="">Seleccione…</option>
+        <% roles.forEach((rol) => { %><option value="<%= rol.id %>" <%= String(r.rol_id) === String(rol.id) ? 'selected' : '' %>><%= rol.nombre %></option><% }) %>
+      </select></div>
+    <div><label for="password"><%= r.id ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña' %></label>
+      <input type="password" id="password" name="password" minlength="8" autocomplete="new-password" <%= r.id ? '' : 'required' %>></div>
+    <div class="span-all">
+      <label>Unidades de negocio asignadas</label>
+      <p class="ayuda" style="margin-top:0">Definen en qué unidades puede iniciar procesos y, si su rol lo permite, qué procesos puede ver.</p>
+      <% unidades.forEach((u) => { %>
+        <label class="check"><input type="checkbox" name="unidades" value="<%= u.id %>" <%= unidadesSel.includes(u.id) ? 'checked' : '' %>> <%= u.nombre %></label>
+      <% }) %>
+    </div>
+    <% if (r.id) { %>
+      <div><label class="check"><input type="checkbox" name="activo" <%= r.activo ? 'checked' : '' %>> Usuario activo</label></div>
+    <% } %>
+  </div>
+  <div class="btn-row" style="margin-top:1rem"><button class="btn">Guardar</button></div>
+</form>

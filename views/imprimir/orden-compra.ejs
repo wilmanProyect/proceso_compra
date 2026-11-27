@@ -1,0 +1,50 @@
+<%
+  const sel = p.seleccionada || { precios: {}, total: 0 };
+  const caja = (v) => `<span class="caja">${p.prioridad === v ? 'X' : ''}</span>`;
+%>
+<%- include('_cabecera') %>
+
+<div class="seccion">1. DATOS GENERALES</div>
+<table>
+  <tr><td class="etq">FECHA DE EMISIÓN:</td><td><%= fmt.fecha(p.oc_fecha_emision) %></td><td class="etq">N° DE ORDEN:</td><td><strong><%= fmt.codigoOc(p) %></strong></td></tr>
+  <tr><td class="etq">EXPRESADO EN:</td><td><%= C.MONEDAS[p.moneda] %> · T/C: <%= Number(p.tipo_cambio) %></td><td class="etq">N° DE REQUERIMIENTO:</td><td><%= fmt.codigoRequerimiento(p) %></td></tr>
+  <tr><td class="etq">PRIORIDAD:</td><td colspan="3">Alta <%- caja('ALTA') %> Media <%- caja('MEDIA') %> Baja <%- caja('BAJA') %></td></tr>
+</table>
+
+<div class="seccion">2. DATOS DEL PROVEEDOR</div>
+<table>
+  <tr><td class="etq">EMPRESA:</td><td><%= sel.proveedor %></td><td class="etq">N° DE NIT:</td><td><%= sel.nit %></td><td class="etq">N° DE TELÉFONO:</td><td><%= sel.telefono %></td></tr>
+  <tr><td class="etq">NOMBRE DEL CONTACTO:</td><td colspan="2"><%= sel.contacto %></td><td class="etq">CORREO ELECTRÓNICO:</td><td colspan="2"><%= sel.email %></td></tr>
+  <tr><td class="etq">NÚMERO DE CUENTA BANCARIA:</td><td colspan="2"><%= sel.cuenta_bancaria %></td><td class="etq">NOMBRE DE BANCO:</td><td colspan="2"><%= sel.banco %></td></tr>
+</table>
+
+<div class="seccion">3. CONDICIONES DE ENTREGA Y PAGO</div>
+<table>
+  <tr><td class="etq">PLAZO O FECHA DE ENTREGA:</td><td><%= p.oc_plazo_entrega %></td></tr>
+  <tr><td class="etq">CONDICIÓN DE PAGO:</td><td><%= p.oc_condicion_pago %></td></tr>
+  <tr><td class="etq">LUGAR DE ENTREGA:</td><td><%= p.oc_lugar_entrega %></td></tr>
+  <tr><td class="etq">LUGAR DE COBRANZA:</td><td><%= p.oc_lugar_cobranza %></td></tr>
+  <tr><td class="etq">CERTIFICADO DEL SERVICIO/MATERIAL/GARANTÍA:</td><td><%= p.oc_certificado %></td></tr>
+  <tr><td class="etq">DATOS PARA LA EMISIÓN DE FACTURA:</td><td class="pre"><%= p.oc_datos_factura %></td></tr>
+  <tr><td colspan="2" class="pre" style="font-size:10px"><strong>NOTAS:</strong>
+<%= p.notas_oc %></td></tr>
+</table>
+
+<div class="seccion">4. DETALLE DE LA COMPRA</div>
+<table>
+  <tr><th>N°</th><th>DESCRIPCIÓN / ESPECIFICACIONES TÉCNICAS</th><th>CANTIDAD</th><th>UNIDAD</th><th>PRECIO UNITARIO</th><th>SUB TOTAL</th></tr>
+  <% p.items.forEach((it) => { const pu = sel.precios[it.id] || 0; %>
+    <tr><td class="center"><%= it.nro %></td><td class="pre"><%= it.descripcion %><%= it.especificaciones ? `\n${it.especificaciones}` : '' %></td>
+      <td class="center"><%= fmt.cantidad(it.cantidad) %></td><td class="center"><%= it.unidad %></td>
+      <td class="right"><%= fmt.dinero(pu) %></td><td class="right"><%= fmt.dinero(pu * Number(it.cantidad)) %></td></tr>
+  <% }) %>
+  <tr><td colspan="4" rowspan="3" class="pre"><strong>COMENTARIOS:</strong> <%= p.oc_comentarios %></td><td class="etq right">MONTO TOTAL:</td><td class="right"><%= fmt.dinero(sel.total) %></td></tr>
+  <tr><td class="etq right">DESCUENTO:</td><td class="right"><%= fmt.dinero(p.oc_descuento) %></td></tr>
+  <tr><td class="etq right">TOTAL A PAGAR:</td><td class="right"><strong><%= p.moneda === 'USD' ? '$us' : 'Bs' %> <%= fmt.dinero(sel.total - Number(p.oc_descuento)) %></strong></td></tr>
+</table>
+
+<div class="seccion">5. FIRMAS</div>
+<div class="firmas-print" style="grid-template-columns:1fr 1fr">
+  <%- include('_firma', { clave: 'ORDEN_COMPRA.SOLICITADO', titulo: 'SOLICITADO POR', cargo: null }) %>
+  <%- include('_firma', { clave: 'ORDEN_COMPRA.AUTORIZADO', titulo: 'REVISADO Y AUTORIZADO POR', cargo: 'GERENTE GENERAL' }) %>
+</div>

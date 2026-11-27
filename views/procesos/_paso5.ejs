@@ -1,0 +1,65 @@
+<%
+  const base = `/procesos/${p.id}`;
+  const ed = acciones.entrega;
+  const sel = p.seleccionada || { precios: {} };
+  const factor = p.moneda === 'USD' ? Number(p.tipo_cambio) : 1;
+  let totalNe = 0;
+%>
+<%- include('_subtareas', { enCurso: p.estado === 'EN_ALMACEN', lista: [
+  ['Emitir la nota de entrega (cierra el proceso)', 'Coord. Adm. y RRHH', !!p.firmas['NOTA_ENTREGA.ENTREGADO']],
+  ['Confirmar que recibió el material (opcional)', p.solicitante_nombre, !!p.firmas['NOTA_ENTREGA.RECIBIDO']],
+] }) %>
+
+<% if (acciones.confirmarEntrega) { %>
+  <div class="trabajo">
+    <h3>¿Recibiste el material?</h3>
+    <p class="small">Se te entregó con la nota de entrega N° <%= fmt.codigoNotaEntrega(p) %>.</p>
+    <form method="post" action="<%= base %>/confirmar-entrega">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="btn" data-confirm="¿Confirmas que recibiste el material?"><%- icono('check') %> Sí, lo recibí</button>
+    </form>
+  </div>
+<% } %>
+
+<% if (ed || p.ne_numero) { %>
+  <% if (ed) { %><div id="trabajo" class="alert info">Emite la nota de entrega al solicitante. Al emitirla, el proceso de compra queda cerrado.</div><% } %>
+  <form method="post" action="<%= base %>/entrega">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="paso" value="5">
+    <fieldset>
+      <legend>Nota de entrega <%= p.ne_numero ? `N° ${fmt.codigoNotaEntrega(p)}` : '' %></legend>
+      <div class="grid g2" style="margin-bottom:.8rem">
+        <div><label for="ne_fecha">Fecha de entrega *</label>
+          <% if (ed) { %><input type="date" id="ne_fecha" name="ne_fecha" value="<%= fmt.fechaInput(p.ne_fecha) || fmt.hoy() %>"><% } else { %><div><%= fmt.fecha(p.ne_fecha) || '—' %></div><% } %></div>
+        <div><label for="ne_entregado_a">Entregado a *</label>
+          <% if (ed) { %><input type="text" id="ne_entregado_a" name="ne_entregado_a" value="<%= p.ne_entregado_a || p.solicitante_nombre %>"><% } else { %><div><%= p.ne_entregado_a || '—' %></div><% } %></div>
+      </div>
+      <div class="tabla-wrap">
+        <table class="tabla">
+          <thead><tr><th>#</th><th>Descripción</th><th>Código / serie</th><th>Modelo</th><th>Cantidad</th><th>Unidad</th><th class="right">P. unitario (Bs)</th><th class="right">Total (Bs)</th></tr></thead>
+          <tbody>
+            <% p.items.forEach((it) => {
+                 const pu = (sel.precios[it.id] || 0) * factor;
+                 const cant = it.ne_cantidad ?? (it.rec_estado === 'Rechazado' ? 0 : (it.rec_cantidad ?? it.cantidad));
+                 totalNe += pu * Number(cant || 0); %>
+              <tr><td><%= it.nro %></td><td><%= it.descripcion %></td><td><%= it.rec_codigo_serie %></td><td><%= it.rec_modelo %></td>
+                <td><% if (ed) { %><input type="number" step="0.01" min="0" name="it[i<%= it.id %>][cantidad]" value="<%= Number(cant || 0) %>" style="width:90px" aria-label="Cantidad entregada"><% } else { %><%= fmt.cantidad(cant) %><% } %></td>
+                <td><%= it.unidad %></td><td class="right"><%= fmt.dinero(pu) %></td><td class="right"><%= fmt.dinero(pu * Number(cant || 0)) %></td></tr>
+            <% }) %>
+          </tbody>
+          <tfoot><tr><td colspan="7" class="right">Total Bs</td><td class="right"><%= fmt.dinero(totalNe) %></td></tr></tfoot>
+        </table>
+      </div>
+    </fieldset>
+
+    <% if (ed) { %>
+      <div class="btn-row">
+        <button class="btn grande" name="accion" value="entregar" data-confirm="¿Emitir la nota de entrega? El proceso de compra quedará cerrado.">Emitir nota de entrega →</button>
+        <button class="btn sec" name="accion" value="guardar">Guardar y seguir después</button>
+      </div>
+    <% } %>
+  </form>
+  <div class="firmas">
+    <%- include('_firma', { clave: 'NOTA_ENTREGA.ENTREGADO', etiqueta: 'Entregado por' }) %>
+    <%- include('_firma', { clave: 'NOTA_ENTREGA.RECIBIDO', etiqueta: 'Recibido por (solicitante)' }) %>
+  </div>
+<% } %>

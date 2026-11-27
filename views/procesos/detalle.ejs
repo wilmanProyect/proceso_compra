@@ -1,0 +1,95 @@
+<%
+  const est = C.ESTADOS[p.estado] || {};
+  const docSolicitud = p.tipo_solicitud === 'EQUIPO_TECNOLOGICO' ? 'ACTA_TECNOLOGICO' : 'SOLICITUD';
+  // Documento imprimible de cada paso (si ya existe)
+  const impresion = {
+    1: ['solicitud', true],
+    2: ['cuadro', p.cotizaciones.length > 0],
+    3: ['orden-compra', !!p.oc_numero],
+    4: ['recepcion', !!p.rec_fecha && p.tipo_solicitud !== 'SERVICIO'],
+    5: ['nota-entrega', !!p.ne_numero],
+  };
+  const iconos = { mio: 'arrow-right', espera: 'hourglass', fin: 'circle-check', detenido: 'circle-x' };
+  const formCodigo = (p.formularios[pasoInfo.n === 1 ? docSolicitud : pasoInfo.documento] || {}).codigo;
+  const [rutaImp, hayImp] = impresion[pasoVer];
+  const textoEstado = { hecho: 'Completado', actual: 'En curso', pendiente: 'Pendiente', no_aplica: 'No aplica', detenido: '' };
+%>
+<section class="card proceso-head">
+  <% if (p.logo) { %><img src="/img/<%= p.logo %>" alt="Logo <%= p.unidad_nombre %>"><% } %>
+  <div class="titulo">
+    <div class="muted small"><%= p.unidad_nombre %> · Gestión <%= p.gestion %> · Rev. documento <%= p.codigo_revision %></div>
+    <h1 style="margin:.15rem 0"><%= fmt.codigoRequerimiento(p) %><% if (p.oc_numero) { %> <span class="muted" style="font-weight:500">· O.C. <%= fmt.codigoOc(p) %></span><% } %></h1>
+    <div class="btn-row">
+      <span class="badge <%= est.clase %>"><%= est.nombre %></span>
+      <span class="badge neutro"><%= C.TIPOS_SOLICITUD[p.tipo_solicitud] %></span>
+      <span class="badge neutro">Prioridad <%= C.PRIORIDADES[p.prioridad] %></span>
+      <span class="badge neutro">Solicitó: <%= p.solicitante_nombre %></span>
+    </div>
+  </div>
+</section>
+
+<nav aria-label="Pasos del proceso">
+  <ol class="stepper">
+    <% pasos.forEach((x) => { %>
+      <li class="<%= x.estado %> <%= x.n === pasoVer ? 'viendo' : '' %>">
+        <a href="/procesos/<%= p.id %>?paso=<%= x.n %>" <%= x.n === pasoVer ? 'aria-current="step"' : '' %>>
+          <span class="circulo"><%- x.estado === 'hecho' ? icono('check') : x.estado === 'detenido' ? icono('x') : x.n %></span>
+          <span class="nombre"><%= x.corto %></span>
+          <span class="sub"><%= x.estado === 'detenido' ? x.nota : textoEstado[x.estado] %></span>
+        </a>
+      </li>
+    <% }) %>
+  </ol>
+</nav>
+
+<div class="siguiente <%= siguiente.tipo %>" role="status">
+  <span class="icono"><%- icono(iconos[siguiente.tipo]) %></span>
+  <div class="texto">
+    <% if (siguiente.tipo === 'mio') { %>
+      <span class="small">Te toca a ti · Paso <%= siguiente.paso %> de 5</span>
+      <b><%= siguiente.titulo %></b>
+    <% } else if (siguiente.tipo === 'espera') { %>
+      <span class="small">Siguiente acción · Paso <%= siguiente.paso %> de 5</span>
+      <b><%= siguiente.titulo %></b>
+      <span class="small">Esperando a: <strong><%= siguiente.quien %></strong></span>
+    <% } else { %>
+      <b><%= siguiente.titulo %></b>
+      <% if (siguiente.texto) { %><span class="small pre"><%= siguiente.texto %></span><% } %>
+    <% } %>
+  </div>
+  <% if (siguiente.tipo === 'mio') { %>
+    <a class="btn grande" href="/procesos/<%= p.id %>?paso=<%= siguiente.paso %>#trabajo">Hacerlo ahora <%- icono('arrow-right') %></a>
+  <% } %>
+</div>
+
+<section class="card paso-panel" id="paso">
+  <div class="encabezado">
+    <div>
+      <div class="num">Paso <%= pasoVer %> de 5 · <%= textoEstado[pasoInfo.estado] || pasoInfo.nota %></div>
+      <h2 style="margin:.1rem 0 0"><%= pasoInfo.titulo %></h2>
+      <% if (formCodigo) { %><span class="small muted">Formulario <%= formCodigo %></span><% } %>
+    </div>
+    <div class="btn-row">
+      <% if (pasoVer > 1) { %><a class="btn sec chico" href="/procesos/<%= p.id %>?paso=<%= pasoVer - 1 %>">← Paso <%= pasoVer - 1 %></a><% } %>
+      <% if (pasoVer < 5) { %><a class="btn sec chico" href="/procesos/<%= p.id %>?paso=<%= pasoVer + 1 %>">Paso <%= pasoVer + 1 %> →</a><% } %>
+      <% if (hayImp) { %><a class="btn sec chico" href="/procesos/<%= p.id %>/imprimir/<%= rutaImp %>" target="_blank" rel="noopener"><%- icono('printer') %> Imprimir / PDF</a><% } %>
+    </div>
+  </div>
+
+  <% if (pasoInfo.estado === 'no_aplica') { %>
+    <div class="alert info"><%= pasoInfo.nota %></div>
+  <% } else if (pasoInfo.estado === 'pendiente') { %>
+    <div class="vacio"><div class="grande"><%- icono('lock') %></div><p>Este paso todavía no comenzó. Se habilita cuando termine el paso anterior.</p></div>
+  <% } else { %>
+    <%- include(`_paso${pasoVer}`, { docSolicitud }) %>
+  <% } %>
+</section>
+
+<section class="card" id="extras">
+  <div class="pestanas" role="tablist">
+    <button type="button" class="activo" data-tab="tab-adjuntos" role="tab" id="btn-adjuntos" aria-controls="tab-adjuntos"><%- icono('paperclip') %> Adjuntos (<%= p.adjuntos.length %>)</button>
+    <button type="button" data-tab="tab-historial" role="tab" id="btn-historial" aria-controls="tab-historial"><%- icono('history') %> Historial (<%= p.eventos.length %>)</button>
+  </div>
+  <div id="tab-adjuntos" role="tabpanel" aria-labelledby="btn-adjuntos"><%- include('_adjuntos') %></div>
+  <div id="tab-historial" role="tabpanel" aria-labelledby="btn-historial"><%- include('_historial') %></div>
+</section>

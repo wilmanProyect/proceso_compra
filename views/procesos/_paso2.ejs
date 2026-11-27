@@ -1,0 +1,184 @@
+<%
+  const ed = acciones.editarCuadro;
+  const base = `/procesos/${p.id}`;
+  const porOrden = {};
+  p.cotizaciones.forEach((c) => { porOrden[`p${c.orden}`] = c; });
+  const claves = ed ? ['p1', 'p2', 'p3'] : ['p1', 'p2', 'p3'].filter((k) => porOrden[k]);
+  const simbolo = p.moneda === 'USD' ? '$us' : 'Bs';
+  const necesarias = Math.max(1, requeridas);
+  const cumple = p.cotizaciones.length >= necesarias || p.excepcion_cotizaciones;
+  const totales = p.cotizaciones.filter((c) => c.total > 0).map((c) => c.total);
+  const masBarato = totales.length > 1 ? Math.min(...totales) : null;
+  const puntajes = p.cotizaciones.map((c) => c.puntaje).filter((x) => x > 0);
+  const mejorPuntaje = puntajes.length > 1 ? Math.max(...puntajes) : null;
+%>
+<%- include('_subtareas', {
+  enCurso: ['EN_COTIZACION', 'COTIZACION_POR_APROBAR'].includes(p.estado),
+  lista: [
+    ['Registrar las cotizaciones y elegir proveedor', 'Responsable de Compras', !!p.firmas['CUADRO.EVALUADOR']],
+    ['Aprobar el cuadro comparativo', 'Gerencia', !!p.firmas['CUADRO.APROBADO']],
+  ],
+}) %>
+
+<% if (acciones.aprobarCuadro) { %>
+  <div class="trabajo" id="trabajo">
+    <h3><%- icono('arrow-right') %> Aprobar el cuadro comparativo</h3>
+    <% if (p.seleccionada) { %>
+      <p>Compras propone adjudicar a <strong><%= p.seleccionada.proveedor %></strong> por
+        <strong><%= simbolo %> <%= fmt.dinero(p.seleccionada.total) %></strong><% if (p.moneda === 'USD') { %> (Bs <%= fmt.dinero(montoBs) %>)<% } %>.
+        Se registraron <%= p.cotizaciones.length %> cotización(es); se requieren <%= requeridas %>.
+        <% if (p.excepcion_cotizaciones) { %><span class="badge pendiente">Con excepción autorizada</span><% } %></p>
+    <% } %>
+    <form method="post" action="<%= base %>/aprobar-cuadro" class="grid">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div><label for="c-cu">Comentario</label><textarea id="c-cu" name="comentario" placeholder="Obligatorio si devuelves con observaciones"></textarea></div>
+      <div class="btn-row">
+        <button class="btn grande" name="decision" value="aprobar" data-confirm="¿Aprobar el cuadro comparativo?"><%- icono('check') %> Aprobar</button>
+        <button class="btn aviso" name="decision" value="observar" data-requiere-comentario="Escribe las observaciones.">Devolver con observaciones</button>
+      </div>
+    </form>
+  </div>
+<% } %>
+
+<% if (ed) { %><div id="trabajo"></div><% } %>
+
+<div class="requisito <%= cumple ? 'ok' : 'falta' %>" id="requisito" data-excepcion="<%= p.excepcion_cotizaciones ? 1 : 0 %>">
+  <span class="grande"><span data-icono-ok class="<%= cumple ? '' : 'hidden' %>"><%- icono('circle-check') %></span><span data-icono-falta class="<%= cumple ? 'hidden' : '' %>"><%- icono('triangle-alert') %></span></span>
+  <div>
+    <strong id="requisito-texto">
+      <% if (montoBs !== null) { %>Monto Bs <%= fmt.dinero(montoBs) %>: necesitas <%= requeridas %> cotización(es) formal(es). Llevas <%= p.cotizaciones.length %>.
+      <% } else { %>Registra al menos 1 cotización. La cantidad necesaria depende del monto.<% } %>
+    </strong>
+    <div class="small">Hasta Bs 1.000 → 0 · Bs 1.001–3.000 → 1 · Bs 3.001–20.000 → 2 · Más de Bs 20.000 → 3</div>
+    <% if (p.excepcion_cotizaciones) { %>
+      <div class="small"><strong>Excepción autorizada</strong> por <%= p.excepcion_usuario_nombre %> (<%= fmt.fechaHora(p.excepcion_fecha) %>): <%= p.excepcion_motivo %></div>
+    <% } %>
+  </div>
+</div>
+
+<% if (acciones.desbloquear && !p.excepcion_cotizaciones) { %>
+  <details class="seccion" style="margin-bottom:1rem">
+    <summary>Autorizar excepción (continuar sin el mínimo de cotizaciones)</summary>
+    <form method="post" action="<%= base %>/excepcion" class="grid" style="margin-top:.6rem;max-width:560px">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="paso" value="2">
+      <div><label for="c-ex">Motivo del caso especial</label><textarea id="c-ex" name="comentario" required></textarea></div>
+      <div><button class="btn aviso chico" data-confirm="¿Autorizar la excepción?">Autorizar excepción</button></div>
+    </form>
+  </details>
+<% } %>
+
+<% if (!ed && !p.cotizaciones.length) { %>
+  <div class="vacio"><div class="grande">⏳</div><p>Compras todavía no registró cotizaciones.</p></div>
+<% } else { %>
+<form method="post" action="<%= base %>/cuadro" <% if (ed) { %>id="form-cuadro"<% } %>>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="paso" value="2">
+
+  <div class="grid g4" style="margin-bottom:1rem">
+    <div><label for="fecha_evaluacion">Fecha de evaluación</label>
+      <% if (ed) { %><input type="date" id="fecha_evaluacion" name="fecha_evaluacion" value="<%= fmt.fechaInput(p.fecha_evaluacion) || fmt.hoy() %>"><% } else { %><div><%= fmt.fecha(p.fecha_evaluacion) %></div><% } %></div>
+    <div><label for="moneda">Moneda de las cotizaciones</label>
+      <% if (ed) { %><select id="moneda" name="moneda"><% Object.entries(C.MONEDAS).forEach(([k, v]) => { %><option value="<%= k %>" <%= p.moneda === k ? 'selected' : '' %>><%= v %></option><% }) %></select>
+      <% } else { %><div><%= C.MONEDAS[p.moneda] %></div><% } %></div>
+    <div><label for="tipo_cambio">Tipo de cambio</label>
+      <% if (ed) { %><input type="number" id="tipo_cambio" name="tipo_cambio" step="0.0001" min="0.0001" value="<%= Number(p.tipo_cambio) %>"><% } else { %><div><%= Number(p.tipo_cambio) %></div><% } %></div>
+    <div><label>Tipo de adquisición</label><div><%= p.tipo_solicitud === 'SERVICIO' ? 'Servicio' : 'Compra' %></div></div>
+  </div>
+
+  <div class="proveedores">
+    <% claves.forEach((k, i) => {
+         const c = porOrden[k] || { precios: {}, criterios: {} };
+         const oculto = ed && i > 0 && !porOrden[k];
+         const barato = masBarato !== null && c.total === masBarato;
+         const mejor = mejorPuntaje !== null && c.puntaje === mejorPuntaje; %>
+      <% if (oculto) { %><button type="button" class="prov-agregar" data-mostrar="<%= k %>"><%- icono('plus') %> Agregar cotización <%= i + 1 %></button><% } %>
+      <div class="prov-card <%= c.seleccionada ? 'adjudicado' : '' %> <%= oculto ? 'hidden' : '' %>" data-prov="<%= k %>">
+        <div class="cab">
+          <span class="num"><%= i + 1 %></span>
+          <span>
+            <span class="badge cerrado <%= barato ? '' : 'hidden' %>" data-badge-barato><%- icono('badge-dollar-sign') %> Más barato</span>
+            <span class="badge proceso <%= mejor ? '' : 'hidden' %>" data-badge-puntaje><%- icono('star') %> Mejor puntaje</span>
+          </span>
+        </div>
+        <% if (ed) { %>
+          <%
+            const lista = proveedoresElegibles.slice();
+            if (c.proveedor_id && !lista.some((x) => String(x.id) === String(c.proveedor_id))) {
+              lista.unshift({ id: c.proveedor_id, razon_social: c.proveedor, estado: c.proveedor_estado, noElegible: true });
+            }
+          %>
+          <label for="prov-<%= k %>">Proveedor (del registro)</label>
+          <select id="prov-<%= k %>" name="cot[<%= k %>][proveedor_id]" data-proveedor="<%= k %>">
+            <option value="">— Elegir proveedor —</option>
+            <% lista.forEach((pv) => { const est = C.ESTADOS_PROVEEDOR[pv.estado] || {}; %>
+              <option value="<%= pv.id %>" <%= String(c.proveedor_id) === String(pv.id) ? 'selected' : '' %>
+                data-contacto="<%= pv.contacto || '' %>" data-telefono="<%= pv.telefono || '' %>"><%= pv.razon_social %><%= pv.nit ? ` · NIT ${pv.nit}` : '' %> — <%= est.nombre %><%= pv.noElegible ? ' (ya no se puede elegir)' : '' %></option>
+            <% }) %>
+            <option value="ocasional">➕ Proveedor ocasional / de emergencia (no registrado)</option>
+          </select>
+          <div class="grid g2 hidden" style="margin-top:.5rem" data-ocasional="<%= k %>">
+            <div class="span-all ayuda" style="margin-top:0">Compra de emergencia (4.2.6): se registrará como "Nuevo (sin evaluar)" y quedará marcado como ocasional.</div>
+            <div><label for="oc-nom-<%= k %>">Razón social</label><input type="text" id="oc-nom-<%= k %>" name="cot[<%= k %>][ocasional_nombre]"></div>
+            <div><label for="oc-nit-<%= k %>">NIT</label><input type="text" id="oc-nit-<%= k %>" name="cot[<%= k %>][ocasional_nit]"></div>
+          </div>
+          <% if (c.proveedor_id && c.proveedor_estado) { const est = C.ESTADOS_PROVEEDOR[c.proveedor_estado]; %>
+            <div class="small" style="margin-top:.35rem"><span class="badge <%= est.clase %>"><%= est.nombre %></span><% if (c.proveedor_ocasional) { %> <span class="badge neutro">Ocasional</span><% } %>
+              <a href="/proveedores/<%= c.proveedor_id %>" target="_blank" rel="noopener">Ver ficha</a></div>
+          <% } %>
+          <div class="grid g2" style="margin-top:.5rem">
+            <div><label for="cont-<%= k %>">Contacto</label><input type="text" id="cont-<%= k %>" name="cot[<%= k %>][contacto]" value="<%= c.contacto || '' %>"></div>
+            <div><label for="tel-<%= k %>">Teléfono</label><input type="text" id="tel-<%= k %>" name="cot[<%= k %>][telefono]" value="<%= c.telefono || '' %>"></div>
+          </div>
+        <% } else { %>
+          <h3><% if (c.proveedor_id) { %><a href="/proveedores/<%= c.proveedor_id %>"><%= c.proveedor %></a><% } else { %><%= c.proveedor %><% } %></h3>
+          <% if (c.proveedor_estado) { const est = C.ESTADOS_PROVEEDOR[c.proveedor_estado]; %><span class="badge <%= est.clase %>"><%= est.nombre %></span><% if (c.proveedor_ocasional) { %> <span class="badge neutro">Ocasional</span><% } %><% } %>
+          <div class="small muted"><%= [c.contacto, c.telefono].filter(Boolean).join(' · ') %></div>
+        <% } %>
+
+        <h4>Precio unitario por ítem</h4>
+        <% p.items.forEach((it) => { const v = c.precios[it.id]; %>
+          <div class="linea">
+            <span><%= it.descripcion %> <span class="muted">× <%= fmt.cantidad(it.cantidad) %> <%= it.unidad %></span></span>
+            <% if (ed) { %><input type="number" step="0.01" min="0" name="cot[<%= k %>][precio][i<%= it.id %>]" value="<%= v ?? '' %>" data-precio="<%= k %>" data-cantidad="<%= it.cantidad %>" aria-label="Precio unitario de <%= it.descripcion %>">
+            <% } else { %><span class="right"><%= v === undefined ? '—' : fmt.dinero(v) %></span><% } %>
+          </div>
+        <% }) %>
+        <div class="total"><span>Total</span><span data-total="<%= k %>"><%= c.proveedor ? `${fmt.dinero(c.total)} ${simbolo}` : '—' %></span></div>
+
+        <details>
+          <summary class="small" style="cursor:pointer;font-weight:600">Calificación (0 a 10) · Puntaje: <span data-puntaje="<%= k %>"><%= c.puntaje || 0 %></span></summary>
+          <% C.CRITERIOS.forEach((crit, n) => { const v = (c.criterios || {})[n + 1]; %>
+            <div class="linea">
+              <span><%= crit %></span>
+              <% if (ed) { %><input type="number" min="0" max="10" step="0.5" name="cot[<%= k %>][criterio][c<%= n + 1 %>]" value="<%= v ?? '' %>" data-criterio="<%= k %>" aria-label="<%= crit %>">
+              <% } else { %><span class="right"><%= v ?? '—' %></span><% } %>
+            </div>
+          <% }) %>
+        </details>
+
+        <% if (ed) { %>
+          <label class="adjudicar"><input type="radio" name="seleccionada" value="<%= k %>" <%= c.seleccionada ? 'checked' : '' %>> Elegir este proveedor</label>
+        <% } else if (c.seleccionada) { %>
+          <div class="adjudicar" style="background:#ecfdf3;color:#05603a"><%- icono('check') %> Proveedor elegido</div>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+
+  <div style="margin-top:1rem">
+    <label for="justificacion">¿Por qué se eligió este proveedor? (justificación)</label>
+    <% if (ed) { %><textarea id="justificacion" name="justificacion" placeholder="Ej.: menor precio y entrega inmediata"><%= p.justificacion %></textarea><% } else { %><p class="pre"><%= p.justificacion || '—' %></p><% } %>
+  </div>
+
+  <% if (ed) { %>
+    <div class="btn-row" style="margin-top:1rem">
+      <button class="btn grande" name="accion" value="enviar" data-confirm="¿Enviar el cuadro comparativo a Gerencia para su aprobación?">Enviar a aprobación →</button>
+      <button class="btn sec" name="accion" value="guardar">Guardar y seguir después</button>
+    </div>
+  <% } %>
+</form>
+<% } %>
+
+<div class="firmas">
+  <%- include('_firma', { clave: 'CUADRO.EVALUADOR', etiqueta: 'Evaluador' }) %>
+  <%- include('_firma', { clave: 'CUADRO.APROBADO', etiqueta: 'Revisado / aprobado por' }) %>
+</div>

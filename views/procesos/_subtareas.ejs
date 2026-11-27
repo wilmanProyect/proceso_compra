@@ -1,0 +1,11 @@
+<%
+  // lista: [[texto, quien, hecho]] — la primera no hecha es la actual (si el paso está en curso)
+  let marcada = false;
+%>
+<ul class="subtareas">
+  <% lista.forEach(([texto, quien, hecho]) => {
+       let clase = hecho ? 'ok' : '';
+       if (!hecho && !marcada && enCurso) { clase = 'actual'; marcada = true; } %>
+    <li class="<%= clase %>"><span class="sr-only"><%= hecho ? "Completado: " : clase === "actual" ? "En curso: " : "Pendiente: " %></span><span class="m" aria-hidden="true"><%- hecho ? icono('check') : '' %></span><span><%= texto %> <span class="muted small">· <%= quien %></span></span></li>
+  <% }) %>
+</ul>

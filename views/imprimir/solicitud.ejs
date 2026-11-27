@@ -1,0 +1,50 @@
+<%
+  const tec = p.tipo_solicitud === 'EQUIPO_TECNOLOGICO';
+  const doc = tec ? 'ACTA_TECNOLOGICO' : 'SOLICITUD';
+%>
+<%- include('_cabecera') %>
+
+<% if (tec) { %>
+  <div class="seccion">DATOS GENERALES</div>
+  <table>
+    <tr><td class="etq">Empresa:</td><td><%= p.razon_social || p.unidad_nombre %></td></tr>
+    <tr><td class="etq">Área solicitante:</td><td><%= p.departamento_nombre %></td></tr>
+    <tr><td class="etq">Responsable de la solicitud:</td><td><%= p.solicitante_nombre %></td></tr>
+    <tr><td class="etq">Área receptora:</td><td><%= p.area_receptora %></td></tr>
+    <tr><td class="etq">Fecha de solicitud:</td><td><%= fmt.fecha(p.fecha_solicitud) %></td></tr>
+    <tr><td class="etq">N° de requerimiento:</td><td><%= fmt.codigoRequerimiento(p) %></td></tr>
+  </table>
+  <div class="seccion">MOTIVO DE LA SOLICITUD</div>
+  <div class="pre" style="border:1px solid #333;padding:6px;min-height:50px"><%= p.motivo %></div>
+  <div class="seccion">DETALLE DE LOS EQUIPOS SOLICITADOS</div>
+  <table>
+    <tr><th>N.º</th><th>Equipo / componente</th><th>Especificaciones</th><th>Proveedor</th><th>Contacto</th><th>Cantidad</th></tr>
+    <% p.items.forEach((it) => { %>
+      <tr><td class="center"><%= it.nro %></td><td class="pre"><%= it.descripcion %></td><td class="pre"><%= it.especificaciones %></td>
+        <td><%= it.proveedor_sugerido %></td><td><%= it.contacto %></td><td class="center"><%= fmt.cantidad(it.cantidad) %> <%= it.unidad %></td></tr>
+    <% }) %>
+  </table>
+  <div class="seccion">OBSERVACIONES</div>
+  <div class="pre" style="border:1px solid #333;padding:6px;min-height:40px"><%= p.comentarios %></div>
+<% } else { %>
+  <table style="margin-top:8px">
+    <tr><td class="etq">SOLICITANTE:</td><td><%= p.solicitante_nombre %></td><td class="etq">FECHA DE LA SOLICITUD:</td><td><%= fmt.fecha(p.fecha_solicitud) %></td></tr>
+    <tr><td class="etq">DEPARTAMENTO:</td><td><%= p.departamento_nombre %></td><td class="etq">PRIORIDAD:</td><td><%= C.PRIORIDADES[p.prioridad] %></td></tr>
+    <tr><td class="etq">NRO. DE REQUERIMIENTO:</td><td><%= fmt.codigoRequerimiento(p) %></td><td class="etq">UNIDAD DE NEGOCIO:</td><td><%= p.unidad_nombre %></td></tr>
+    <tr><td class="etq">TIPO DE SOLICITUD:</td><td colspan="3"><%= C.TIPOS_SOLICITUD[p.tipo_solicitud] %><%= p.requiere_oc ? ' · Producto crítico / activo fijo' : '' %></td></tr>
+  </table>
+  <table style="margin-top:8px">
+    <tr><th>Item</th><th>Descripción</th><th>No. Parte</th><th>Cantidad</th><th>Unidad</th><th>Destino</th><th>Observaciones / Referencias</th></tr>
+    <% p.items.forEach((it) => { %>
+      <tr><td class="center"><%= it.nro %></td><td class="pre"><%= it.descripcion %></td><td><%= it.nro_parte %></td><td class="center"><%= fmt.cantidad(it.cantidad) %></td>
+        <td class="center"><%= it.unidad %></td><td><%= it.destino %></td><td><%= it.observaciones %></td></tr>
+    <% }) %>
+  </table>
+  <table style="margin-top:8px"><tr><td class="etq">Comentarios:</td><td class="pre"><%= p.comentarios %></td></tr></table>
+<% } %>
+
+<div class="firmas-print" style="grid-template-columns:repeat(3,1fr)">
+  <%- include('_firma', { clave: `${doc}.SOLICITADO`, titulo: 'Solicitado por', cargo: null }) %>
+  <%- include('_firma', { clave: `${doc}.AUTORIZADO`, titulo: 'Autorizado por', cargo: null }) %>
+  <%- include('_firma', { clave: `${doc}.RECIBIDO`, titulo: 'Recibido por', cargo: null }) %>
+</div>

@@ -1,0 +1,111 @@
+<%
+  const ed = acciones.editarOc;
+  const base = `/procesos/${p.id}`;
+  const sel = p.seleccionada || { precios: {}, total: 0 };
+  const simbolo = p.moneda === 'USD' ? '$us' : 'Bs';
+  const condiciones = [
+    ['oc_plazo_entrega', 'Plazo o fecha de entrega *', p.oc_plazo_entrega, 'Ej.: 10 días hábiles'],
+    ['oc_condicion_pago', 'Condición de pago *', p.oc_condicion_pago, 'Ej.: Crédito 30 días'],
+    ['oc_lugar_entrega', 'Lugar de entrega *', p.oc_lugar_entrega, ''],
+    ['oc_lugar_cobranza', 'Lugar de cobranza', p.oc_lugar_cobranza, ''],
+    ['oc_certificado', 'Certificado del servicio/material/garantía', p.oc_certificado, ''],
+  ];
+  const proveedor = [
+    ['nit', 'NIT', sel.nit], ['telefono', 'Teléfono', sel.telefono], ['contacto', 'Contacto', sel.contacto],
+    ['email', 'Correo electrónico', sel.email], ['cuenta_bancaria', 'Cuenta bancaria', sel.cuenta_bancaria], ['banco', 'Banco', sel.banco],
+  ];
+%>
+<%- include('_subtareas', {
+  enCurso: ['OC_EN_PREPARACION', 'OC_POR_AUTORIZAR'].includes(p.estado),
+  lista: [
+    ['Completar y emitir la orden de compra', 'Responsable de Compras', !!p.firmas['ORDEN_COMPRA.SOLICITADO']],
+    ['Autorizar la orden de compra', 'Gerencia', !!p.firmas['ORDEN_COMPRA.AUTORIZADO']],
+  ],
+}) %>
+
+<% if (acciones.autorizarOc) { %>
+  <div class="trabajo" id="trabajo">
+    <h3><%- icono('arrow-right') %> Autorizar la orden de compra <%= fmt.codigoOc(p) %></h3>
+    <p>Proveedor <strong><%= sel.proveedor %></strong> · Total a pagar <strong><%= simbolo %> <%= fmt.dinero(sel.total - Number(p.oc_descuento)) %></strong> · Entrega: <%= p.oc_plazo_entrega %></p>
+    <form method="post" action="<%= base %>/autorizar-oc" class="grid">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div><label for="c-oc">Comentario</label><textarea id="c-oc" name="comentario" placeholder="Obligatorio si devuelves con observaciones"></textarea></div>
+      <div class="btn-row">
+        <button class="btn grande" name="decision" value="aprobar" data-confirm="¿Autorizar la orden de compra?"><%- icono('check') %> Autorizar</button>
+        <button class="btn aviso" name="decision" value="observar" data-requiere-comentario="Escribe las observaciones.">Devolver con observaciones</button>
+      </div>
+    </form>
+  </div>
+<% } %>
+<% if (ed) { %><div id="trabajo" class="alert info">Completa los datos que faltan y pulsa <strong>Emitir orden de compra</strong>. El número se asigna al emitir.</div><% } %>
+
+<form method="post" action="<%= base %>/orden-compra" <% if (ed) { %>id="form-oc"<% } %> data-total="<%= sel.total %>">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="paso" value="3">
+  <fieldset>
+    <legend>1. Datos generales</legend>
+    <dl class="datos">
+      <div><dt>N° de orden</dt><dd><%= fmt.codigoOc(p) || 'Se asigna al emitir' %></dd></div>
+      <div><dt>Fecha de emisión</dt><dd><%= fmt.fecha(p.oc_fecha_emision) || 'Al emitir' %></dd></div>
+      <div><dt>Moneda</dt><dd><%= C.MONEDAS[p.moneda] %> · T/C <%= Number(p.tipo_cambio) %></dd></div>
+      <div><dt>Prioridad</dt><dd><% if (ed) { %>
+        <select name="prioridad" aria-label="Prioridad"><% Object.entries(C.PRIORIDADES).forEach(([k, v]) => { %><option value="<%= k %>" <%= p.prioridad === k ? 'selected' : '' %>><%= v %></option><% }) %></select>
+      <% } else { %><%= C.PRIORIDADES[p.prioridad] %><% } %></dd></div>
+    </dl>
+  </fieldset>
+
+  <fieldset>
+    <legend>2. Proveedor: <%= sel.proveedor || '—' %></legend>
+    <div class="grid g3">
+      <% proveedor.forEach(([k, et, v]) => { %>
+        <div><label for="prov-<%= k %>"><%= et %></label>
+          <% if (ed) { %><input type="text" id="prov-<%= k %>" name="prov[<%= k %>]" value="<%= v || '' %>"><% } else { %><div><%= v || '—' %></div><% } %></div>
+      <% }) %>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>3. Condiciones de entrega y pago</legend>
+    <div class="grid g2">
+      <% condiciones.forEach(([nombre, etiqueta, valor, ph]) => { %>
+        <div><label for="<%= nombre %>"><%= etiqueta %></label>
+          <% if (ed) { %><input type="text" id="<%= nombre %>" name="<%= nombre %>" value="<%= valor %>" placeholder="<%= ph %>"><% } else { %><div><%= valor || '—' %></div><% } %></div>
+      <% }) %>
+      <div><label for="oc_datos_factura">Datos para la factura</label>
+        <% if (ed) { %><textarea id="oc_datos_factura" name="oc_datos_factura"><%= p.oc_datos_factura %></textarea><% } else { %><div class="pre"><%= p.oc_datos_factura || '—' %></div><% } %></div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>4. Detalle de la compra</legend>
+    <div class="tabla-wrap">
+      <table class="tabla">
+        <thead><tr><th>#</th><th>Descripción</th><th class="right">Cantidad</th><th>Unidad</th><th class="right">Precio unitario</th><th class="right">Subtotal</th></tr></thead>
+        <tbody>
+          <% p.items.forEach((it) => { const pu = sel.precios[it.id] || 0; %>
+            <tr><td><%= it.nro %></td><td><%= it.descripcion %></td><td class="right"><%= fmt.cantidad(it.cantidad) %></td><td><%= it.unidad %></td>
+              <td class="right"><%= fmt.dinero(pu) %></td><td class="right"><%= fmt.dinero(pu * Number(it.cantidad)) %></td></tr>
+          <% }) %>
+        </tbody>
+        <tfoot>
+          <tr><td colspan="5" class="right">Monto total (<%= simbolo %>)</td><td class="right"><%= fmt.dinero(sel.total) %></td></tr>
+          <tr><td colspan="5" class="right">Descuento</td><td class="right"><% if (ed) { %><input type="number" id="oc_descuento" name="oc_descuento" min="0" step="0.01" value="<%= Number(p.oc_descuento) %>" style="max-width:130px;text-align:right" aria-label="Descuento"><% } else { %><%= fmt.dinero(p.oc_descuento) %><% } %></td></tr>
+          <tr><td colspan="5" class="right">Total a pagar (<%= simbolo %>)</td><td class="right" id="oc-total-pagar"><%= fmt.dinero(sel.total - Number(p.oc_descuento)) %></td></tr>
+        </tfoot>
+      </table>
+    </div>
+    <div style="margin-top:.8rem"><label for="oc_comentarios">Comentarios</label>
+      <% if (ed) { %><textarea id="oc_comentarios" name="oc_comentarios"><%= p.oc_comentarios %></textarea><% } else { %><div class="pre"><%= p.oc_comentarios || '—' %></div><% } %></div>
+  </fieldset>
+
+  <% if (ed) { %>
+    <div class="btn-row">
+      <button class="btn grande" name="accion" value="emitir" data-confirm="¿Emitir la orden de compra y enviarla a Gerencia para autorizar?">Emitir orden de compra →</button>
+      <button class="btn sec" name="accion" value="guardar">Guardar y seguir después</button>
+    </div>
+  <% } %>
+</form>
+
+<div class="firmas">
+  <%- include('_firma', { clave: 'ORDEN_COMPRA.SOLICITADO', etiqueta: 'Solicitado por' }) %>
+  <%- include('_firma', { clave: 'ORDEN_COMPRA.AUTORIZADO', etiqueta: 'Revisado y autorizado por' }) %>
+</div>

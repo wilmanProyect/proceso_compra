@@ -1,0 +1,76 @@
+<%
+  const ed = acciones.editarRecepcion;
+  const checks = [
+    ['rec_cantidad_ok', 'Cantidad conforme'], ['rec_estado_ok', 'Estado físico conforme'], ['rec_documentacion_ok', 'Documentación conforme'],
+    ['rec_accesorios_ok', 'Accesorios completos'], ['rec_especificaciones_ok', 'Especificaciones verificadas'],
+  ];
+%>
+<form method="post" action="/procesos/<%= p.id %>/recepcion">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="paso" value="4">
+  <fieldset>
+    <legend>1. Datos generales</legend>
+    <div class="grid g4">
+      <div><label for="rec_fecha">Fecha de recepción *</label>
+        <% if (ed) { %><input type="date" id="rec_fecha" name="rec_fecha" value="<%= fmt.fechaInput(p.rec_fecha) || fmt.hoy() %>"><% } else { %><div><%= fmt.fecha(p.rec_fecha) %></div><% } %></div>
+      <div><label>Orden de compra</label><div><%= fmt.codigoOc(p) || 'No aplica' %></div></div>
+      <div><label>Proveedor</label><div><%= p.seleccionada ? p.seleccionada.proveedor : '—' %></div></div>
+      <div><label for="rec_nro_factura">N° de factura o recibo</label>
+        <% if (ed) { %><input type="text" id="rec_nro_factura" name="rec_nro_factura" value="<%= p.rec_nro_factura %>"><% } else { %><div><%= p.rec_nro_factura || '—' %></div><% } %></div>
+      <div class="span-all"><label>Tipo de bien *</label>
+        <% Object.entries(C.TIPOS_BIEN).forEach(([k, v]) => { %>
+          <% if (ed) { %><label class="check"><input type="radio" name="rec_tipo_bien" value="<%= k %>" <%= (p.rec_tipo_bien || (p.requiere_oc ? 'ACTIVO_FIJO' : '')) === k ? 'checked' : '' %>> <%= v %></label>
+          <% } else { %><span class="check"><%= p.rec_tipo_bien === k ? '☑' : '☐' %> <%= v %></span><% } %>
+        <% }) %>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>2. ¿Qué llegó?</legend>
+    <div class="tabla-wrap">
+      <table class="tabla">
+        <thead><tr><th>#</th><th>Descripción</th><th>Pedido</th><th>Recibido *</th><th>Estado *</th><th>Código / N° serie</th><th>Modelo</th><th>Observaciones</th></tr></thead>
+        <tbody>
+          <% p.items.forEach((it) => { const n = `it[i${it.id}]`; %>
+            <tr>
+              <td><%= it.nro %></td><td><%= it.descripcion %></td><td class="nowrap"><%= fmt.cantidad(it.cantidad) %> <%= it.unidad %></td>
+              <% if (ed) { %>
+                <td><input type="number" step="0.01" min="0" name="<%= n %>[cantidad]" value="<%= Number(it.rec_cantidad ?? it.cantidad) %>" style="width:90px" aria-label="Cantidad recibida"></td>
+                <td><select name="<%= n %>[estado]" aria-label="Estado de inspección"><option value="">—</option>
+                  <% C.ESTADOS_INSPECCION.forEach((e) => { %><option <%= (it.rec_estado || 'Aceptado') === e ? 'selected' : '' %>><%= e %></option><% }) %></select></td>
+                <td><input type="text" name="<%= n %>[codigo_serie]" value="<%= it.rec_codigo_serie %>" aria-label="Código o serie"></td>
+                <td><input type="text" name="<%= n %>[modelo]" value="<%= it.rec_modelo %>" aria-label="Modelo"></td>
+                <td><input type="text" name="<%= n %>[observaciones]" value="<%= it.rec_observaciones %>" aria-label="Observaciones"></td>
+              <% } else { %>
+                <td><%= fmt.cantidad(it.rec_cantidad) %></td><td><%= it.rec_estado %></td><td><%= it.rec_codigo_serie %></td><td><%= it.rec_modelo %></td><td><%= it.rec_observaciones %></td>
+              <% } %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>3. Verificación</legend>
+    <% checks.forEach(([k, et]) => { %>
+      <% if (ed) { %><label class="check"><input type="checkbox" name="<%= k %>" <%= p[k] ? 'checked' : '' %>> <%= et %></label>
+      <% } else { %><span class="check"><%= p[k] ? '☑' : '☐' %> <%= et %></span><% } %>
+    <% }) %>
+  </fieldset>
+
+  <fieldset>
+    <legend>4. Comentarios</legend>
+    <% if (ed) { %><textarea name="rec_comentarios" aria-label="Comentarios"><%= p.rec_comentarios %></textarea><% } else { %><div class="pre"><%= p.rec_comentarios || '—' %></div><% } %>
+  </fieldset>
+
+  <% if (ed) { %>
+    <div class="btn-row">
+      <button class="btn grande" name="accion" value="enviar" data-confirm="¿Registrar la recepción? Pasará a emitir la nota de entrega.">Registrar recepción →</button>
+      <button class="btn sec" name="accion" value="guardar">Guardar y seguir después</button>
+    </div>
+  <% } %>
+</form>
+<div class="firmas">
+  <%- include('_firma', { clave: 'RECEPCION.RECEPCIONADO', etiqueta: 'Recepcionado e inspeccionado por' }) %>
+</div>

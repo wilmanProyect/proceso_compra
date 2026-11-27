@@ -1,0 +1,53 @@
+<%
+  const cots = p.cotizaciones;
+  const simbolo = p.moneda === 'USD' ? '$us' : 'Bs';
+%>
+<%- include('_cabecera') %>
+
+<div class="seccion">1. DATOS GENERALES</div>
+<table>
+  <tr><td class="etq">N° SOLICITUD DE REQUERIMIENTO:</td><td><%= fmt.codigoRequerimiento(p) %></td><td class="etq">FECHA DE EVALUACIÓN:</td><td><%= fmt.fecha(p.fecha_evaluacion) %></td></tr>
+  <tr><td class="etq">N° ORDEN DE COMPRA O SERVICIO:</td><td><%= fmt.codigoOc(p) %></td><td class="etq">RESPONSABLE:</td><td><%= (p.firmas['CUADRO.EVALUADOR'] || {}).nombre || '' %></td></tr>
+</table>
+
+<div class="seccion">2. TIPO DE ADQUISICIÓN</div>
+<table><tr><td class="center">COMPRA <span class="caja"><%= p.tipo_solicitud !== 'SERVICIO' ? 'X' : '' %></span></td>
+  <td class="center">SERVICIO <span class="caja"><%= p.tipo_solicitud === 'SERVICIO' ? 'X' : '' %></span></td></tr></table>
+
+<div class="seccion">3. CRITERIOS DE SELECCIÓN Y ADJUDICACIÓN</div>
+<table><tr><td>
+  La selección se basará en un análisis comparativo integral, adjudicando al proveedor que ofrezca la mejor relación calidad-precio según tres pilares:<br>
+  <strong>Técnico:</strong> Cumplimiento de especificaciones, requisitos documentales y calidad.<br>
+  <strong>Comercial:</strong> Precio ofertado, plazos de entrega y condiciones de pago.<br>
+  <strong>Respaldo:</strong> Tiempos de garantía y soporte técnico postventa.
+</td></tr></table>
+
+<div class="seccion">4. COMPARATIVO</div>
+<table>
+  <tr><th rowspan="2">N°</th><th rowspan="2">LISTA DE PRODUCTOS/SERVICIOS</th><th colspan="<%= cots.length %>">CALIFICACIÓN</th></tr>
+  <tr><% cots.forEach((c) => { %><th>PROVEEDOR <%= c.orden %><br><%= c.proveedor %><%= c.seleccionada ? ' ✔' : '' %></th><% }) %></tr>
+  <% C.CRITERIOS.forEach((crit, n) => { %>
+    <tr><td class="center"><%= n + 1 %></td><td><%= crit %></td><% cots.forEach((c) => { %><td class="center"><%= (c.criterios || {})[n + 1] ?? '' %></td><% }) %></tr>
+  <% }) %>
+  <tr><td></td><td><strong>PUNTAJE TOTAL</strong></td><% cots.forEach((c) => { %><td class="center"><strong><%= c.puntaje %></strong></td><% }) %></tr>
+</table>
+
+<table style="margin-top:8px">
+  <tr><th rowspan="2">N°</th><th rowspan="2">LISTA DE PRODUCTOS/SERVICIOS</th><th rowspan="2">CANT.</th><th colspan="<%= cots.length %>">PRECIO UNITARIO (<%= simbolo %>)</th></tr>
+  <tr><% cots.forEach((c) => { %><th>PROVEEDOR <%= c.orden %><br><%= c.proveedor %></th><% }) %></tr>
+  <% p.items.forEach((it) => { %>
+    <tr><td class="center"><%= it.nro %></td><td><%= it.descripcion %></td><td class="center"><%= fmt.cantidad(it.cantidad) %> <%= it.unidad %></td>
+      <% cots.forEach((c) => { const v = c.precios[it.id]; %><td class="right"><%= v === undefined ? '' : fmt.dinero(v) %></td><% }) %></tr>
+  <% }) %>
+  <tr><td></td><td colspan="2"><strong>TOTAL OFERTADO (<%= simbolo %>)</strong></td><% cots.forEach((c) => { %><td class="right"><strong><%= fmt.dinero(c.total) %></strong></td><% }) %></tr>
+  <% if (p.moneda === 'USD') { %><tr><td></td><td colspan="2">Tipo de cambio: <%= Number(p.tipo_cambio) %> · Equivalente Bs</td><% cots.forEach((c) => { %><td class="right"><%= fmt.dinero(c.total * Number(p.tipo_cambio)) %></td><% }) %></tr><% } %>
+</table>
+<table style="margin-top:6px"><tr><td class="etq">Justificación:</td><td class="pre"><%= p.justificacion %></td></tr>
+  <% if (p.excepcion_cotizaciones) { %><tr><td class="etq">Excepción:</td><td>Autorizada por <%= p.excepcion_usuario_nombre %> (<%= fmt.fechaHora(p.excepcion_fecha) %>): <%= p.excepcion_motivo %></td></tr><% } %>
+</table>
+
+<div class="seccion">5. FIRMAS</div>
+<div class="firmas-print" style="grid-template-columns:1fr 1fr">
+  <%- include('_firma', { clave: 'CUADRO.EVALUADOR', titulo: 'EVALUADOR', cargo: null }) %>
+  <%- include('_firma', { clave: 'CUADRO.APROBADO', titulo: 'REVISADO / APROBADO POR', cargo: 'GERENTE GENERAL' }) %>
+</div>

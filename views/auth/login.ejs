@@ -1,0 +1,22 @@
+<section class="auth-card">
+  <h1>Proceso de Compras</h1>
+  <p class="muted">Ingrese con su usuario para gestionar solicitudes, cotizaciones y órdenes de compra.</p>
+  <% if (locals.error) { %><div class="alert error" role="alert"><%= error %></div><% } %>
+  <form method="post" action="/login" class="grid">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div>
+      <label for="usuario">Usuario</label>
+      <input type="text" id="usuario" name="usuario" value="<%= usuarioIngresado %>" autocomplete="username" required autofocus>
+    </div>
+    <div>
+      <label for="password">Contraseña</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn">Ingresar</button>
+  </form>
+  <div class="auth-logos" aria-hidden="true">
+    <img src="/img/Logo_Rio_Verde.png" alt=""><img src="/img/Logo_Zentta.png" alt="">
+    <img src="/img/LOGO_SANTA_ROSA.png" alt=""><img src="/img/Logo_Revoagro.png" alt="">
+    <img src="/img/Logo_Agroptima.png" alt=""><img src="/img/LOGO_LASIERRA360.png" alt="">
+  </div>
+</section>

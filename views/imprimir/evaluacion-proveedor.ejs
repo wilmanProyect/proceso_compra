@@ -1,0 +1,78 @@
+<%
+  const crit = ev.criterios || {};
+  const acc = ev.acciones || {};
+  const caja = (ok) => `<span class="caja">${ok ? 'X' : ''}</span>`;
+  const nota = (v) => (v === null || v === undefined ? '' : Number(v).toFixed(2).replace('.', ','));
+%>
+<%- include('_cabecera') %>
+
+<table style="margin-top:8px">
+  <tr><td class="etq">FECHA DE EVALUACIÓN:</td><td><%= fmt.fecha(ev.fecha_evaluacion) %></td>
+    <td class="etq">FECHA DE PRÓXIMA RE-EVALUACIÓN:</td><td><%= fmt.fecha(ev.proxima_reevaluacion) %></td></tr>
+</table>
+
+<div class="seccion">1. DATOS GENERALES DEL PROVEEDOR</div>
+<table>
+  <tr><td class="etq">RAZÓN SOCIAL / NOMBRE COMERCIAL:</td><td colspan="3"><%= ev.razon_social %><%= ev.nombre_comercial ? ` / ${ev.nombre_comercial}` : '' %></td>
+    <td class="etq">N° DE NIT:</td><td><%= ev.nit %></td></tr>
+  <tr><td class="etq">DIRECCIÓN:</td><td colspan="3"><%= ev.direccion %></td><td class="etq">CIUDAD:</td><td><%= ev.ciudad %></td></tr>
+  <tr><td class="etq">CORREO ELECTRÓNICO:</td><td colspan="3"><%= ev.email %></td><td class="etq">N° DE TELÉFONO:</td><td><%= ev.telefono %></td></tr>
+  <tr><td class="etq">PRODUCTO(S) O SERVICIO(S) SUMINISTRADO(S):</td><td colspan="5" class="pre"><%= ev.tipo_suministro %></td></tr>
+  <tr><td class="etq">CLASIFICACIÓN DEL PROVEEDOR:</td><td colspan="5">CRÍTICO <%- caja(ev.clasificacion === 'CRITICO') %> &nbsp; NO CRÍTICO <%- caja(ev.clasificacion === 'NO_CRITICO') %></td></tr>
+</table>
+
+<div class="seccion">2. TIPO DE EVALUACIÓN</div>
+<table><tr><td class="center">INICIAL <%- caja(ev.tipo === 'INICIAL') %></td><td class="center">RE-EVALUACIÓN <%- caja(ev.tipo === 'REEVALUACION') %></td></tr></table>
+
+<div class="seccion">3. ESCALA DE CALIFICACIÓN</div>
+<table>
+  <tr><td class="etq">VALOR:</td><% C.ESCALA_PROVEEDOR.forEach(([v]) => { %><td class="center"><%= v %></td><% }) %></tr>
+  <tr><td class="etq">DESCRIPCIÓN:</td><% C.ESCALA_PROVEEDOR.forEach(([, d]) => { %><td class="center"><%= d %></td><% }) %></tr>
+  <tr><td colspan="7" style="font-size:9.5px">Nota: Los criterios calificados como "N/A (No Aplica)" no serán considerados para el cálculo del promedio de la calificación y deberán estar debidamente justificados en la sección de comentarios.</td></tr>
+</table>
+
+<div class="seccion">4. EVALUACIÓN DEL PROVEEDOR</div>
+<table>
+  <tr><th style="width:6%">N°</th><th>CRITERIO DE EVALUACIÓN</th><th style="width:14%">CALIFICACIÓN</th><th>COMENTARIOS</th></tr>
+  <% C.CRITERIOS_PROVEEDOR.forEach((nombre, i) => { const c = crit[i + 1] || {}; %>
+    <tr><td class="center"><%= i + 1 %>.0</td><td><%= nombre %></td>
+      <td class="center"><strong><%= c.nota === null ? 'N/A' : (c.nota ?? '') %></strong></td><td><%= c.comentario %></td></tr>
+  <% }) %>
+  <tr><td colspan="2" class="right"><strong>PROMEDIO FINAL OBTENIDO</strong></td><td class="center"><strong><%= nota(ev.promedio) %></strong></td><td></td></tr>
+</table>
+
+<div class="seccion">5. RESULTADO DE LA EVALUACIÓN <span style="font-weight:400">(Promedio final de 8,0 a 10,0 = Aprobado; 6,0 a 7,9 = Aprobado con Observaciones; menor a 6,0 = No Aprobado)</span></div>
+<table><tr>
+  <td class="center">APROBADO <%- caja(ev.resultado === 'APROBADO') %></td>
+  <td class="center">APROBADO CON OBSERVACIÓN <%- caja(ev.resultado === 'APROBADO_OBS') %></td>
+  <td class="center">NO APROBADO <%- caja(ev.resultado === 'NO_APROBADO') %></td>
+</tr></table>
+
+<div class="seccion">6. ACCIONES REQUERIDAS</div>
+<table><tr><td>
+  <%- caja(acc.mantener) %> Mantener como proveedor aprobado &nbsp;
+  <%- caja(acc.seguimiento) %> Realizar seguimiento &nbsp;
+  <%- caja(acc.reevaluar) %> Reevaluar en <%= acc.reevaluar && ev.meses_reevaluacion ? ev.meses_reevaluacion : '___' %> meses<br>
+  <%- caja(acc.correctivas) %> Solicitar acciones correctivas &nbsp;
+  <%- caja(acc.suspender) %> Suspender temporalmente &nbsp;
+  <%- caja(acc.retirar) %> Retirar del listado de proveedores aprobados
+</td></tr></table>
+
+<div class="seccion">7. OBSERVACIONES GENERALES</div>
+<div class="pre" style="border:1px solid #333;padding:6px;min-height:40px"><%= ev.observaciones %><%= ev.observacion_aprobador && ev.estado === 'APROBADA' ? `\nAprobación: ${ev.observacion_aprobador}` : '' %></div>
+
+<div class="seccion">8. FIRMAS</div>
+<div class="firmas-print" style="grid-template-columns:1fr 1fr">
+  <div class="f">
+    <div class="titulo-f">EVALUADOR</div>
+    <div>Nombre: <%= ev.evaluador_nombre %></div>
+    <div>Firma: <% if (ev.enviado_en) { %><span class="digital">✔ Registrado en el sistema · <%= fmt.fechaHora(ev.enviado_en) %></span><% } %></div>
+    <div><%= ev.evaluador_cargo || '(CARGO)' %></div>
+  </div>
+  <div class="f">
+    <div class="titulo-f">REVISADO / APROBADO POR</div>
+    <div>Nombre: <%= ev.aprobador_nombre || '' %></div>
+    <div>Firma: <% if (ev.aprobado_en) { %><span class="digital">✔ Aprobado en el sistema · <%= fmt.fechaHora(ev.aprobado_en) %></span><% } %></div>
+    <div><%= ev.aprobador_cargo || 'GERENTE GENERAL' %></div>
+  </div>
+</div>

@@ -1,0 +1,9 @@
+<% const f = p.firmas[clave]; %>
+<div class="firma <%= f ? 'ok' : '' %>">
+  <b><%= etiqueta %></b>
+  <% if (f) { %>
+    <%- icono('check') %> <%= f.nombre %><div class="muted small"><%= f.cargo %> · <%= fmt.fechaHora(f.fecha) %></div>
+  <% } else { %>
+    <span class="muted">Pendiente</span>
+  <% } %>
+</div>

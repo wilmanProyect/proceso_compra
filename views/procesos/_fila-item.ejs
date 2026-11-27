@@ -1,0 +1,15 @@
+<div class="item-card">
+  <div class="titulo-item">Ítem <span class="nro-item"></span></div>
+  <button type="button" class="btn sec chico quitar-item" aria-label="Quitar ítem"><%- icono('x') %> Quitar</button>
+  <div class="grid g4">
+    <div class="span2"><label>Descripción *<textarea name="items[<%= i %>][descripcion]" rows="2" data-item="descripcion"><%= it.descripcion || '' %></textarea></label></div>
+    <div><label>Cantidad *<input type="number" name="items[<%= i %>][cantidad]" min="0.01" step="0.01" value="<%= it.cantidad || '' %>" data-item="cantidad"></label></div>
+    <div><label>Unidad<input type="text" name="items[<%= i %>][unidad]" value="<%= it.unidad || '' %>" placeholder="pza, kg, lt, m" data-item="unidad"></label></div>
+    <div class="span2 solo-tecnologico"><label>Especificaciones técnicas<textarea name="items[<%= i %>][especificaciones]" rows="2"><%= it.especificaciones || '' %></textarea></label></div>
+    <div class="solo-tecnologico"><label>Proveedor sugerido<input type="text" name="items[<%= i %>][proveedor_sugerido]" value="<%= it.proveedor_sugerido || '' %>"></label></div>
+    <div class="solo-tecnologico"><label>Contacto<input type="text" name="items[<%= i %>][contacto]" value="<%= it.contacto || '' %>"></label></div>
+    <div class="no-tecnologico"><label>N° de parte<input type="text" name="items[<%= i %>][nro_parte]" value="<%= it.nro_parte || '' %>"></label></div>
+    <div class="no-tecnologico"><label>Destino<input type="text" name="items[<%= i %>][destino]" value="<%= it.destino || '' %>"></label></div>
+    <div class="span2 no-tecnologico"><label>Observaciones / referencias<input type="text" name="items[<%= i %>][observaciones]" value="<%= it.observaciones || '' %>"></label></div>
+  </div>
+</div>

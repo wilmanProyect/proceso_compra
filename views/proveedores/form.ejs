@@ -1,0 +1,31 @@
+<% const pv = proveedor; %>
+<div class="page-head">
+  <div><h1><%= title %></h1><p class="muted">Datos generales del proveedor (sección 1 del formulario RV.FCOM.02.1).</p></div>
+  <a class="btn sec" href="<%= id ? `/proveedores/${id}` : '/proveedores' %>">Cancelar</a>
+</div>
+<form method="post" action="<%= id ? `/proveedores/${id}` : '/proveedores' %>" class="card">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="grid g2">
+    <div><label for="razon_social">Razón social *</label><input type="text" id="razon_social" name="razon_social" value="<%= pv.razon_social || '' %>" required maxlength="200"></div>
+    <div><label for="nombre_comercial">Nombre comercial</label><input type="text" id="nombre_comercial" name="nombre_comercial" value="<%= pv.nombre_comercial || '' %>" maxlength="200"></div>
+    <div><label for="nit">N° de NIT</label><input type="text" id="nit" name="nit" value="<%= pv.nit || '' %>" maxlength="40"></div>
+    <div><label for="ciudad">Ciudad</label><input type="text" id="ciudad" name="ciudad" value="<%= pv.ciudad || '' %>" maxlength="100"></div>
+    <div class="span-all"><label for="direccion">Dirección</label><input type="text" id="direccion" name="direccion" value="<%= pv.direccion || '' %>" maxlength="250"></div>
+    <div><label for="contacto">Contacto principal</label><input type="text" id="contacto" name="contacto" value="<%= pv.contacto || '' %>" maxlength="150"></div>
+    <div><label for="telefono">N° de teléfono</label><input type="text" id="telefono" name="telefono" value="<%= pv.telefono || '' %>" maxlength="60"></div>
+    <div><label for="email">Correo electrónico</label><input type="email" id="email" name="email" value="<%= pv.email || '' %>" maxlength="150"></div>
+    <div></div>
+    <div><label for="banco">Banco</label><input type="text" id="banco" name="banco" value="<%= pv.banco || '' %>" maxlength="100"></div>
+    <div><label for="cuenta_bancaria">N° de cuenta bancaria</label><input type="text" id="cuenta_bancaria" name="cuenta_bancaria" value="<%= pv.cuenta_bancaria || '' %>" maxlength="60"></div>
+    <div class="span-all"><label for="tipo_suministro">Producto(s) o servicio(s) suministrado(s)</label>
+      <textarea id="tipo_suministro" name="tipo_suministro" placeholder="Ej.: Insumos agrícolas (PQUA), transporte de granos, repuestos..."><%= pv.tipo_suministro || '' %></textarea></div>
+    <fieldset class="span-all">
+      <legend>Clasificación del proveedor *</legend>
+      <label class="check"><input type="radio" name="clasificacion" value="CRITICO" <%= pv.clasificacion === 'CRITICO' ? 'checked' : '' %> required> Crítico</label>
+      <label class="check"><input type="radio" name="clasificacion" value="NO_CRITICO" <%= pv.clasificacion !== 'CRITICO' ? 'checked' : '' %>> No crítico</label>
+      <p class="ayuda"><strong>Crítico (4.1.1):</strong> influye directamente en la calidad, la seguridad, la continuidad o la satisfacción del cliente (transporte de granos y semillas, insumos agrícolas, balanza, repuestos críticos, mantenimiento especializado, calibración, software). Se reevalúa como mínimo una vez al año.<br>
+        <strong>No crítico (4.1.2):</strong> papelería, limpieza, publicidad, cafetería, suministros administrativos, servicios generales. Se reevalúa cada dos años.</p>
+    </fieldset>
+  </div>
+  <div class="btn-row" style="margin-top:1rem"><button class="btn grande"><%- icono('check') %> Guardar</button></div>
+</form>

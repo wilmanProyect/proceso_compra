@@ -1,0 +1,196 @@
+<%
+  const est = C.ESTADOS_PROVEEDOR[pv.estado];
+  const vencida = pv.proxima_reevaluacion && pv.proxima_reevaluacion <= hoy && pv.estado !== 'RETIRADO';
+  const csrf = `<input type="hidden" name="_csrf" value="${csrfToken}">`;
+  const nota = (v) => (v === null || v === undefined ? '—' : Number(v).toFixed(2).replace('.', ','));
+%>
+<section class="card proceso-head">
+  <div class="titulo">
+    <div class="muted small"><a href="/proveedores">Proveedores</a> · <%= C.CLASIFICACIONES[pv.clasificacion] %><%= pv.ocasional ? ' · Ocasional / emergencia' : '' %></div>
+    <h1 style="margin:.15rem 0"><%= pv.razon_social %></h1>
+    <div class="btn-row">
+      <span class="badge <%= est.clase %>"><%= est.nombre %></span>
+      <% if (pv.nit) { %><span class="badge neutro">NIT <%= pv.nit %></span><% } %>
+      <% if (pv.fecha_evaluacion) { %><span class="badge neutro">Promedio <%= nota(pv.promedio) %> · <%= fmt.fecha(pv.fecha_evaluacion) %></span><% } %>
+      <% if (pv.proxima_reevaluacion) { %><span class="badge <%= vencida ? 'rechazado' : 'neutro' %>">Próxima reevaluación: <%= fmt.fecha(pv.proxima_reevaluacion) %><%= vencida ? ' (vencida)' : '' %></span><% } %>
+    </div>
+  </div>
+  <% if (puede('proveedores.gestionar')) { %><a class="btn sec" href="/proveedores/<%= pv.id %>/editar"><%- icono('pencil') %> Editar datos</a><% } %>
+</section>
+
+<% if (!est.elegible) { %>
+  <div class="alert error">Este proveedor está <strong><%= est.nombre.toLowerCase() %></strong>: no se puede elegir en nuevos cuadros comparativos.</div>
+<% } else if (pv.estado === 'NUEVO') { %>
+  <div class="alert info">Proveedor sin evaluar. Se puede usar en compras; la evaluación formal (RV.FCOM.02.1) se aplica cuando haya evidencia de su desempeño (4.2.2).</div>
+<% } %>
+
+<% if (puede('proveedores.gestionar')) { %>
+<section class="trabajo" id="evaluar">
+  <% if (evaluacionAbierta) { %>
+    <h3><%- icono('arrow-right') %> Hay una evaluación <%= C.ESTADOS_EVALUACION[evaluacionAbierta.estado].nombre.toLowerCase() %></h3>
+    <p class="small">Iniciada por <%= evaluacionAbierta.evaluador_nombre %> el <%= fmt.fecha(evaluacionAbierta.fecha_evaluacion) %>.</p>
+    <a class="btn" href="/proveedores/evaluaciones/<%= evaluacionAbierta.id %>">Abrir evaluación →</a>
+  <% } else { %>
+    <h3><%- icono('clipboard-check') %> <%= pv.evaluaciones.length ? 'Re-evaluar' : 'Evaluar' %> a este proveedor</h3>
+    <form method="post" action="/proveedores/<%= pv.id %>/evaluaciones" class="btn-row">
+      <%- csrf %>
+      <% if (unidades.length > 1) { %>
+        <label for="unidad-eval" class="sr-only">Unidad de negocio que evalúa</label>
+        <select id="unidad-eval" name="unidad_id" style="width:auto">
+          <% unidades.forEach((u) => { %><option value="<%= u.id %>"><%= u.nombre %></option><% }) %>
+        </select>
+      <% } else if (unidades.length) { %><input type="hidden" name="unidad_id" value="<%= unidades[0].id %>"><% } %>
+      <button class="btn">Iniciar evaluación (RV.FCOM.02.1) →</button>
+    </form>
+  <% } %>
+</section>
+<% } %>
+
+<div class="grid g2" style="align-items:start">
+  <section class="card">
+    <h2>Datos generales</h2>
+    <dl class="datos">
+      <div><dt>Nombre comercial</dt><dd><%= pv.nombre_comercial || '—' %></dd></div>
+      <div><dt>Contacto principal</dt><dd><%= pv.contacto || '—' %></dd></div>
+      <div><dt>Teléfono</dt><dd><%= pv.telefono || '—' %></dd></div>
+      <div><dt>Correo</dt><dd><%= pv.email || '—' %></dd></div>
+      <div><dt>Dirección</dt><dd><%= [pv.direccion, pv.ciudad].filter(Boolean).join(', ') || '—' %></dd></div>
+      <div><dt>Banco / cuenta</dt><dd><%= [pv.banco, pv.cuenta_bancaria].filter(Boolean).join(' · ') || '—' %></dd></div>
+      <div style="grid-column:1/-1"><dt>Producto(s) o servicio(s)</dt><dd class="pre"><%= pv.tipo_suministro || '—' %></dd></div>
+    </dl>
+    <p class="small muted" style="margin-top:.8rem">Registrado el <%= fmt.fechaHora(pv.creado_en) %><%= pv.creado_por_nombre ? ` por ${pv.creado_por_nombre}` : '' %>.</p>
+  </section>
+
+  <% if (puede('proveedores.aprobar')) { %>
+  <section class="card">
+    <h2>Estado y reevaluación</h2>
+    <p class="small muted">Solo Gerencia General y Administración.</p>
+    <form method="post" action="/proveedores/<%= pv.id %>/estado" class="grid" style="margin-bottom:1.2rem">
+      <%- csrf %>
+      <div><label for="estado-nuevo">Cambiar estado</label>
+        <select id="estado-nuevo" name="estado" required>
+          <option value="">Elegir…</option>
+          <% if (pv.estado !== 'SUSPENDIDO') { %><option value="SUSPENDIDO">Suspender temporalmente</option><% } %>
+          <% if (pv.estado !== 'RETIRADO') { %><option value="RETIRADO">Retirar del listado de proveedores aprobados</option><% } %>
+          <% if (['SUSPENDIDO', 'RETIRADO'].includes(pv.estado)) { %><option value="REACTIVAR">Reactivar (vuelve al resultado de su última evaluación)</option><% } %>
+        </select></div>
+      <div><label for="motivo-estado">Motivo *</label><input type="text" id="motivo-estado" name="motivo" required></div>
+      <div><button class="btn sec chico" data-confirm="¿Cambiar el estado del proveedor?">Cambiar estado</button></div>
+    </form>
+    <form method="post" action="/proveedores/<%= pv.id %>/reevaluacion" class="grid">
+      <%- csrf %>
+      <div><label for="proxima">Próxima reevaluación</label><input type="date" id="proxima" name="proxima_reevaluacion" value="<%= fmt.fechaInput(pv.proxima_reevaluacion) %>" required></div>
+      <div><label for="motivo-reev">Motivo (opcional)</label><input type="text" id="motivo-reev" name="motivo" placeholder="Ej.: reclamos recurrentes, adelantar reevaluación"></div>
+      <div><button class="btn sec chico"><%- icono('calendar-clock') %> Guardar fecha</button></div>
+    </form>
+  </section>
+  <% } %>
+</div>
+
+<section class="card" id="evaluaciones">
+  <h2>Evaluaciones (RV.FCOM.02.1)</h2>
+  <% if (!pv.evaluaciones.length) { %><p class="muted">Todavía no tiene evaluaciones.</p><% } else { %>
+  <div class="tabla-wrap"><table class="tabla">
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Unidad</th><th>Promedio</th><th>Resultado</th><th>Estado</th><th>Evaluó / aprobó</th><th></th></tr></thead>
+    <tbody>
+      <% pv.evaluaciones.forEach((e) => { const ee = C.ESTADOS_EVALUACION[e.estado]; %>
+        <tr>
+          <td class="nowrap"><a href="/proveedores/evaluaciones/<%= e.id %>"><%= fmt.fecha(e.fecha_evaluacion) %></a></td>
+          <td class="small"><%= C.TIPOS_TIPO_EVALUACION[e.tipo] %></td>
+          <td class="small"><%= e.unidad_nombre %></td>
+          <td><strong><%= nota(e.promedio) %></strong></td>
+          <td class="small"><%= e.resultado ? C.RESULTADOS_EVALUACION[e.resultado] : '—' %></td>
+          <td><span class="badge <%= ee.clase %>"><%= ee.nombre %></span></td>
+          <td class="small"><%= e.evaluador_nombre %><%= e.aprobador_nombre ? ` / ${e.aprobador_nombre}` : '' %></td>
+          <td><a class="btn sec chico" href="/proveedores/evaluaciones/<%= e.id %>/imprimir" target="_blank" rel="noopener"><%- icono('printer') %></a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+  <% } %>
+</section>
+
+<section class="card" id="incidencias">
+  <h2>Seguimiento del desempeño (incidencias)</h2>
+  <p class="small muted">Se registran solas cuando en una recepción un ítem queda "Rechazado" o "Aceptado con observaciones". Son información de entrada para la próxima evaluación (4.6).</p>
+  <% if (!pv.incidencias.length) { %><p class="muted">Sin incidencias registradas.</p><% } else { %>
+  <ul class="historial">
+    <% pv.incidencias.forEach((i) => { %>
+      <li>
+        <div><span class="badge <%= i.tipo === 'RECHAZADO' ? 'rechazado' : i.tipo === 'OBSERVACIONES' ? 'pendiente' : 'neutro' %>"><%= { RECHAZADO: 'Rechazado en recepción', OBSERVACIONES: 'Aceptado con observaciones', MANUAL: 'Registro manual' }[i.tipo] || i.tipo %></span>
+          <% if (i.proceso_id) { %><a href="/procesos/<%= i.proceso_id %>?paso=4" class="small"><%= i.sigla %>-REQ-<%= i.nro_requerimiento %></a><% } %></div>
+        <div class="coment"><%= i.descripcion %></div>
+        <div class="cuando"><%= i.usuario_nombre || 'Sistema' %> · <%= fmt.fechaHora(i.fecha) %><%= pv.fecha_evaluacion && fmt.fechaInput(i.fecha) <= pv.fecha_evaluacion ? ' · considerada en la última evaluación' : '' %></div>
+      </li>
+    <% }) %>
+  </ul>
+  <% } %>
+  <% if (puede('proveedores.gestionar')) { %>
+    <form method="post" action="/proveedores/<%= pv.id %>/incidencias" class="btn-row" style="margin-top:.8rem">
+      <%- csrf %>
+      <input type="text" name="descripcion" aria-label="Nueva incidencia u observación" placeholder="Registrar una incidencia u observación (reclamo, retraso, falla...)" required style="flex:1;min-width:240px">
+      <button class="btn sec">Registrar</button>
+    </form>
+  <% } %>
+</section>
+
+<section class="card" id="documentos">
+  <h2>Documentación de respaldo</h2>
+  <% if (!pv.adjuntos.length) { %><p class="muted small">Sin documentos.</p><% } else { %>
+  <div class="tabla-wrap"><table class="tabla">
+    <thead><tr><th>Documento</th><th>Tipo</th><th>Subido por</th><th>Fecha</th><th></th></tr></thead>
+    <tbody>
+      <% pv.adjuntos.forEach((a) => { const enLinea = /^(application\/pdf|image\/)/.test(a.mime); %>
+        <tr>
+          <td><a href="/proveedores/adjuntos/<%= a.id %><%= enLinea ? '?ver=1' : '' %>" target="_blank" rel="noopener"><%= a.nombre_original %></a></td>
+          <td class="small"><%= a.tipo_doc %></td>
+          <td class="small"><%= a.usuario_nombre %></td>
+          <td class="small nowrap"><%= fmt.fechaHora(a.fecha) %></td>
+          <td><% if (String(a.usuario_id) === String(usuario.id) || puede('proveedores.aprobar')) { %>
+            <form method="post" action="/proveedores/adjuntos/<%= a.id %>/eliminar"><%- csrf %><button class="btn sec chico" data-confirm="¿Eliminar este documento?">Eliminar</button></form>
+          <% } %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+  <% } %>
+  <% if (puede('proveedores.gestionar')) { %>
+    <form method="post" action="/proveedores/<%= pv.id %>/adjuntos" enctype="multipart/form-data" class="grid g3" style="margin-top:1rem;align-items:end">
+      <%- csrf %>
+      <div><label for="tipo_doc">Tipo de documento</label>
+        <select id="tipo_doc" name="tipo_doc"><% C.TIPOS_DOC_PROVEEDOR.forEach((t) => { %><option><%= t %></option><% }) %></select></div>
+      <div><label for="archivos-prov">Archivos</label><input type="file" id="archivos-prov" name="archivos" multiple required accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.xlsm,.csv,.txt,.zip"></div>
+      <div><button class="btn sec"><%- icono('paperclip') %> Adjuntar</button></div>
+    </form>
+  <% } %>
+</section>
+
+<section class="card">
+  <h2>Compras en las que participó</h2>
+  <% if (!pv.compras.length) { %><p class="muted small">Todavía no cotizó en ningún proceso.</p><% } else { %>
+  <div class="tabla-wrap"><table class="tabla">
+    <thead><tr><th>Proceso</th><th>Unidad</th><th>Fecha</th><th>Resultado</th><th>Estado del proceso</th></tr></thead>
+    <tbody>
+      <% pv.compras.forEach((pr) => { %>
+        <tr>
+          <td><a href="/procesos/<%= pr.id %>"><%= pr.sigla %>-REQ-<%= pr.nro_requerimiento %></a><%= pr.oc_numero ? ` · O.C. ${pr.sigla}-${pr.oc_numero}` : '' %></td>
+          <td class="small"><%= pr.unidad_nombre %></td>
+          <td class="small"><%= fmt.fecha(pr.fecha_solicitud) %></td>
+          <td><span class="badge <%= pr.seleccionada ? 'cerrado' : 'neutro' %>"><%= pr.seleccionada ? 'Adjudicado' : 'Cotizó' %></span></td>
+          <td class="small"><%= (C.ESTADOS[pr.estado] || {}).nombre || pr.estado %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+  <% } %>
+</section>
+
+<section class="card">
+  <h2>Historial</h2>
+  <ul class="historial">
+    <% pv.eventos.forEach((e) => { %>
+      <li><div><strong><%= e.accion %></strong></div><div class="cuando"><%= e.usuario_nombre || 'Sistema' %> · <%= fmt.fechaHora(e.fecha) %></div>
+        <% if (e.comentario) { %><div class="coment"><%= e.comentario %></div><% } %></li>
+    <% }) %>
+  </ul>
+</section>

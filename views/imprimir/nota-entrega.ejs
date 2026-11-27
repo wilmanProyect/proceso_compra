@@ -1,0 +1,30 @@
+<%
+  const sel = p.seleccionada || { precios: {} };
+  const factor = p.moneda === 'USD' ? Number(p.tipo_cambio) : 1;
+  let total = 0;
+%>
+<%- include('_cabecera') %>
+
+<table style="margin-top:8px">
+  <tr><td class="etq">FECHA DE ENTREGA:</td><td><%= fmt.fecha(p.ne_fecha) %></td><td class="right" style="color:#c00;font-weight:700;font-size:14px">N° <%= fmt.codigoNotaEntrega(p) %></td></tr>
+  <tr><td class="etq">ENTREGADO A:</td><td colspan="2"><%= p.ne_entregado_a %></td></tr>
+  <tr><td class="etq">REQUERIMIENTO:</td><td colspan="2"><%= fmt.codigoRequerimiento(p) %><%= p.oc_numero ? ` · O.C. ${fmt.codigoOc(p)}` : '' %></td></tr>
+</table>
+
+<table style="margin-top:8px">
+  <tr><th>N°</th><th>DESCRIPCIÓN / ESPECIFICACIONES TÉCNICAS</th><th>CÓDIGO / N° DE SERIE</th><th>MODELO</th><th>CANTIDAD</th><th>UNIDAD</th><th>PRECIO UNITARIO (BS)</th><th>TOTAL (BS)</th></tr>
+  <% p.items.forEach((it) => {
+       const cant = Number(it.ne_cantidad || 0);
+       if (!cant) return;
+       const pu = (sel.precios[it.id] || 0) * factor;
+       total += pu * cant; %>
+    <tr><td class="center"><%= it.nro %></td><td><%= it.descripcion %></td><td><%= it.rec_codigo_serie %></td><td><%= it.rec_modelo %></td>
+      <td class="center"><%= fmt.cantidad(cant) %></td><td class="center"><%= it.unidad %></td><td class="right"><%= fmt.dinero(pu) %></td><td class="right"><%= fmt.dinero(pu * cant) %></td></tr>
+  <% }) %>
+  <tr><td colspan="7" class="right" style="background:#f4b183"><strong>TOTAL BS</strong></td><td class="right"><strong><%= fmt.dinero(total) %></strong></td></tr>
+</table>
+
+<div class="firmas-print" style="grid-template-columns:1fr 1fr;margin-top:30px">
+  <%- include('_firma', { clave: 'NOTA_ENTREGA.ENTREGADO', titulo: 'ENTREGADO POR', cargo: null }) %>
+  <%- include('_firma', { clave: 'NOTA_ENTREGA.RECIBIDO', titulo: 'RECIBIDO POR', cargo: null }) %>
+</div>

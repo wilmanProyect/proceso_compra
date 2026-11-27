@@ -1,0 +1,67 @@
+<% const u = unidad; %>
+<div class="page-head">
+  <div><h1><%= u.nombre %></h1><p class="muted">Sigla <strong><%= u.sigla %></strong>: se usa en los correlativos (<%= u.sigla %>-REQ-1, O.C. <%= u.sigla %>-1). Los correlativos se reinician cada año.</p></div>
+  <a class="btn sec" href="/admin/unidades">Volver</a>
+</div>
+
+<form method="post" action="/admin/unidades/<%= u.id %>" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <section class="card">
+    <h2>Datos generales</h2>
+    <div class="grid g3">
+      <div><label for="nombre">Nombre</label><input type="text" id="nombre" name="nombre" value="<%= u.nombre %>" required></div>
+      <div><label for="razon_social">Razón social</label><input type="text" id="razon_social" name="razon_social" value="<%= u.razon_social %>"></div>
+      <div><label for="nit">NIT</label><input type="text" id="nit" name="nit" value="<%= u.nit %>"></div>
+      <div><label for="direccion">Dirección</label><input type="text" id="direccion" name="direccion" value="<%= u.direccion %>"></div>
+      <div><label for="telefono">Teléfono</label><input type="text" id="telefono" name="telefono" value="<%= u.telefono %>"></div>
+      <div><label for="codigo_revision">Código de revisión de documento</label><input type="text" id="codigo_revision" name="codigo_revision" value="<%= u.codigo_revision %>">
+        <div class="ayuda">Cambia solo cuando el documento se revisa (ej.: <%= u.sigla %>.26.001).</div></div>
+      <div><label for="logo">Logo</label>
+        <% if (u.logo) { %><img src="/img/<%= u.logo %>" alt="Logo actual" style="max-height:48px;display:block;margin-bottom:.4rem"><% } %>
+        <input type="file" id="logo" name="logo" accept=".png,.jpg,.jpeg,.webp,.svg"></div>
+      <div style="align-self:end"><label class="check"><input type="checkbox" name="activo" <%= u.activo ? 'checked' : '' %>> Unidad activa</label></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Valores por defecto de la orden de compra</h2>
+    <div class="grid g2">
+      <div><label for="lugar_entrega">Lugar de entrega</label><input type="text" id="lugar_entrega" name="lugar_entrega" value="<%= u.lugar_entrega %>"></div>
+      <div><label for="lugar_cobranza">Lugar de cobranza</label><input type="text" id="lugar_cobranza" name="lugar_cobranza" value="<%= u.lugar_cobranza %>"></div>
+      <div><label for="datos_factura">Datos para la emisión de factura</label><textarea id="datos_factura" name="datos_factura"><%= u.datos_factura %></textarea></div>
+      <div><label for="notas_oc">Notas de la orden de compra</label><textarea id="notas_oc" name="notas_oc" rows="6"><%= u.notas_oc %></textarea></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Códigos de formularios</h2>
+    <p class="muted">Los códigos, versiones, títulos y fechas de los encabezados de esta unidad se administran en
+      <a href="/admin/formularios?unidad=<%= u.id %>">Formularios electrónicos</a>, con historial de cambios.</p>
+  </section>
+  <div class="btn-row" style="margin-bottom:1.2rem"><button class="btn">Guardar cambios</button></div>
+</form>
+
+<section class="card" id="departamentos">
+  <h2>Departamentos</h2>
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <tbody>
+        <% departamentos.forEach((d) => { %>
+          <tr><td><%= d.nombre %></td><td><span class="badge <%= d.activo ? 'cerrado' : 'neutro' %>"><%= d.activo ? 'Activo' : 'Inactivo' %></span></td>
+            <td class="right">
+              <form method="post" action="/admin/unidades/<%= u.id %>/departamentos/<%= d.id %>">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="activo" value="<%= d.activo ? '0' : '1' %>">
+                <button class="btn sec chico"><%= d.activo ? 'Desactivar' : 'Activar' %></button>
+              </form>
+            </td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <form method="post" action="/admin/unidades/<%= u.id %>/departamentos" class="btn-row" style="margin-top:1rem">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="text" name="nombre" placeholder="Nuevo departamento" aria-label="Nuevo departamento" style="max-width:300px" required>
+    <button class="btn sec">Agregar</button>
+  </form>
+</section>

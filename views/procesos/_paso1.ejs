@@ -1,0 +1,41 @@
+<% const base = `/procesos/${p.id}`; %>
+<%- include('_subtareas', {
+  enCurso: p.estado === 'PENDIENTE_APROBACION',
+  lista: [
+    ['Registrar la solicitud', p.solicitante_nombre, !!p.firmas[`${docSolicitud}.SOLICITADO`]],
+    ['Revisión presupuestaria: aprobar o rechazar', 'Gerencia', !!p.firmas[`${docSolicitud}.AUTORIZADO`]],
+    ['Recibir la solicitud para cotizar', 'Responsable de Compras', !!p.firmas[`${docSolicitud}.RECIBIDO`]],
+  ],
+}) %>
+
+<% if (p.estado === 'RECHAZADO') { %><div class="alert error"><strong>Rechazada:</strong> <%= p.motivo_rechazo %></div><% } %>
+<% if (p.estado === 'CERRADO_STOCK') { %><div class="alert info">El material existe en stock. Gestione la entrega con el Coordinador Adm. y RRHH.</div><% } %>
+
+<% if (acciones.aprobarSolicitud) { %>
+  <div class="trabajo" id="trabajo">
+    <h3><%- icono('arrow-right') %> Revisión presupuestaria</h3>
+    <p class="small">Revisa lo que se pide (abajo). Si apruebas, pasa a Compras para cotizar. Si rechazas, el solicitante verá el motivo.</p>
+    <% if (p.monto_estimado) { %><p class="small">Monto estimado: <strong>Bs <%= fmt.dinero(p.monto_estimado) %></strong> → se necesitarán <strong><%= requeridas %></strong> cotización(es).</p><% } %>
+    <form method="post" action="<%= base %>/aprobar-solicitud" class="grid">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div><label for="c-sol">Comentario</label><textarea id="c-sol" name="comentario" placeholder="Obligatorio si rechazas"></textarea></div>
+      <div class="btn-row">
+        <button class="btn grande" name="decision" value="aprobar" data-confirm="¿Aprobar la solicitud?"><%- icono('check') %> Aprobar</button>
+        <button class="btn peligro" name="decision" value="rechazar" data-requiere-comentario="Escribe el motivo del rechazo." data-confirm="¿Rechazar la solicitud?">Rechazar</button>
+      </div>
+    </form>
+  </div>
+<% } %>
+
+<%- include('_solicitud', { docSolicitud }) %>
+
+<% if (acciones.anular) { %>
+  <details class="seccion" style="margin-top:1rem">
+    <summary>Anular mi solicitud</summary>
+    <form method="post" action="<%= base %>/anular" class="grid" style="margin-top:.6rem;max-width:520px">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div><label for="c-an">Motivo</label><textarea id="c-an" name="comentario"></textarea></div>
+      <div><button class="btn peligro chico" data-confirm="¿Anular la solicitud? No se puede deshacer.">Anular solicitud</button></div>
+    </form>
+  </details>
+<% } %>

@@ -1,0 +1,13 @@
+<div class="page-head">
+  <div><h1>Unidades de negocio</h1><p class="muted">Logo, razón social, código de revisión de documento y departamentos de cada unidad.</p></div>
+</div>
+<div style="display:grid;gap:.9rem;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">
+  <% lista.forEach((u) => { %>
+    <a class="card" href="/admin/unidades/<%= u.id %>" style="text-decoration:none;color:inherit;text-align:center">
+      <% if (u.logo) { %><img src="/img/<%= u.logo %>" alt="" style="max-height:60px;max-width:160px;object-fit:contain"><% } %>
+      <h3 style="margin-top:.6rem"><%= u.nombre %></h3>
+      <div class="small muted">Sigla <strong><%= u.sigla %></strong> · O.C. <%= u.sigla %>-1 · Rev. <%= u.codigo_revision %></div>
+      <% if (!u.activo) { %><span class="badge rechazado">Inactiva</span><% } %>
+    </a>
+  <% }) %>
+</div>

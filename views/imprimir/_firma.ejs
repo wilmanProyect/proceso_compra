@@ -1,0 +1,7 @@
+<% const f = p.firmas[clave]; %>
+<div class="f">
+  <div class="titulo-f"><%= titulo %></div>
+  <div>Nombre: <%= f ? f.nombre : '' %></div>
+  <div>Firma: <% if (f) { %><span class="digital">✔ Aprobado en el sistema · <%= fmt.fechaHora(f.fecha) %></span><% } %></div>
+  <div><%= locals.cargo || (f ? f.cargo : '(CARGO)') %></div>
+</div>

@@ -1,0 +1,168 @@
+<%
+  const ed = editable;
+  const crit = ev.criterios || {};
+  const acc = ev.acciones || {};
+  const ee = C.ESTADOS_EVALUACION[ev.estado];
+  const nota = (v) => (v === null || v === undefined ? '—' : Number(v).toFixed(2).replace('.', ','));
+  const csrf = `<input type="hidden" name="_csrf" value="${csrfToken}">`;
+%>
+<div class="page-head">
+  <div>
+    <div class="muted small"><a href="/proveedores">Proveedores</a> · <a href="/proveedores/<%= ev.proveedor_id %>"><%= ev.razon_social %></a></div>
+    <h1>Evaluación y re-evaluación de proveedores</h1>
+    <div class="btn-row">
+      <span class="badge <%= ee.clase %>"><%= ee.nombre %></span>
+      <span class="badge neutro"><%= C.TIPOS_TIPO_EVALUACION[ev.tipo] %></span>
+      <span class="badge neutro"><%= ev.unidad_nombre %></span>
+    </div>
+  </div>
+  <a class="btn sec" href="/proveedores/evaluaciones/<%= ev.id %>/imprimir" target="_blank" rel="noopener"><%- icono('printer') %> Imprimir / PDF</a>
+</div>
+
+<% if (ev.estado === 'BORRADOR' && ev.observacion_aprobador) { %>
+  <div class="alert aviso"><strong>Devuelta con observaciones:</strong> <%= ev.observacion_aprobador %></div>
+<% } %>
+<% if (ev.estado === 'POR_APROBAR' && !puedeAprobar) { %>
+  <div class="alert info">Enviada a aprobación de Gerencia General / Administración el <%= fmt.fechaHora(ev.enviado_en) %>.</div>
+<% } %>
+
+<% if (puedeAprobar) { const destino = C.ESTADOS_PROVEEDOR[estadoResultante]; %>
+  <section class="trabajo" id="aprobar">
+    <h3><%- icono('arrow-right') %> Aprobar la evaluación</h3>
+    <p>Promedio <strong><%= nota(ev.promedio) %></strong> → <strong><%= C.RESULTADOS_EVALUACION[ev.resultado] %></strong>.
+      Al aprobar, el proveedor quedará: <span class="badge <%= destino.clase %>"><%= destino.nombre %></span>
+      <% if (acc.retirar || acc.suspender) { %><span class="small">(por la acción "<%= acc.retirar ? C.ACCIONES_EVALUACION.retirar : C.ACCIONES_EVALUACION.suspender %>")</span><% } %></p>
+    <form method="post" action="/proveedores/evaluaciones/<%= ev.id %>/aprobar" class="grid g2">
+      <%- csrf %>
+      <div><label for="meses">Reevaluar en (meses) *</label>
+        <input type="number" id="meses" name="meses_reevaluacion" min="1" max="60" step="1" value="<%= mesesSugeridos %>">
+        <div class="ayuda">Sugerido: <%= C.MESES_REEVALUACION.CRITICO %> meses para críticos, <%= C.MESES_REEVALUACION.NO_CRITICO %> para no críticos<%= acc.reevaluar ? '; el evaluador pidió reevaluar antes' : '' %>. Lo define Gerencia General / Administración.</div></div>
+      <div><label for="c-ap">Comentario</label><textarea id="c-ap" name="comentario" placeholder="Obligatorio si la devuelves"></textarea></div>
+      <div class="btn-row span-all">
+        <button class="btn grande" name="decision" value="aprobar" data-confirm="¿Aprobar la evaluación?"><%- icono('check') %> Aprobar</button>
+        <button class="btn aviso" name="decision" value="devolver" data-requiere-comentario="Escribe las observaciones para el evaluador.">Devolver con observaciones</button>
+      </div>
+    </form>
+  </section>
+<% } %>
+
+<div class="layout-eval" style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:1.1rem;align-items:start">
+<form method="post" action="/proveedores/evaluaciones/<%= ev.id %>" id="form-eval">
+  <%- csrf %>
+  <section class="card">
+    <h2>1. Datos generales del proveedor</h2>
+    <dl class="datos">
+      <div><dt>Razón social / nombre comercial</dt><dd><%= ev.razon_social %><%= ev.nombre_comercial ? ` (${ev.nombre_comercial})` : '' %></dd></div>
+      <div><dt>NIT</dt><dd><%= ev.nit || '—' %></dd></div>
+      <div><dt>Dirección / ciudad</dt><dd><%= [ev.direccion, ev.ciudad].filter(Boolean).join(', ') || '—' %></dd></div>
+      <div><dt>Correo / teléfono</dt><dd><%= [ev.email, ev.telefono].filter(Boolean).join(' · ') || '—' %></dd></div>
+      <div><dt>Producto(s) o servicio(s)</dt><dd><%= ev.tipo_suministro || '—' %></dd></div>
+      <div><dt>Clasificación</dt><dd><%= C.CLASIFICACIONES[ev.clasificacion] %></dd></div>
+    </dl>
+    <div class="grid g3" style="margin-top:1rem">
+      <div><label for="fecha_evaluacion">Fecha de evaluación</label>
+        <% if (ed) { %><input type="date" id="fecha_evaluacion" name="fecha_evaluacion" value="<%= fmt.fechaInput(ev.fecha_evaluacion) %>"><% } else { %><div><%= fmt.fecha(ev.fecha_evaluacion) %></div><% } %></div>
+      <div><label>Fecha de próxima re-evaluación</label><div><%= ev.proxima_reevaluacion ? fmt.fecha(ev.proxima_reevaluacion) : 'Se define al aprobar' %></div></div>
+      <div><label for="unidad_id">Unidad de negocio que evalúa</label>
+        <% if (ed && unidades.length > 1) { %>
+          <select id="unidad_id" name="unidad_id"><% unidades.forEach((u) => { %><option value="<%= u.id %>" <%= u.id === ev.unidad_id ? 'selected' : '' %>><%= u.nombre %></option><% }) %></select>
+        <% } else { %><div><%= ev.unidad_nombre %></div><% } %></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2. Tipo de evaluación: <%= C.TIPOS_TIPO_EVALUACION[ev.tipo] %></h2>
+    <h2 style="margin-top:1rem">3. Escala de calificación</h2>
+    <div class="tabla-wrap"><table class="tabla">
+      <thead><tr><% C.ESCALA_PROVEEDOR.forEach(([v]) => { %><th class="center"><%= v %></th><% }) %></tr></thead>
+      <tbody><tr><% C.ESCALA_PROVEEDOR.forEach(([, d]) => { %><td class="center small"><%= d %></td><% }) %></tr></tbody>
+    </table></div>
+    <p class="ayuda">Los criterios "N/A (No Aplica)" no se consideran en el promedio y deben justificarse en comentarios.</p>
+  </section>
+
+  <section class="card">
+    <h2>4. Evaluación del proveedor</h2>
+    <div class="tabla-wrap"><table class="tabla">
+      <thead><tr><th>N°</th><th>Criterio de evaluación</th><th style="width:150px">Calificación</th><th>Comentarios</th></tr></thead>
+      <tbody>
+        <% C.CRITERIOS_PROVEEDOR.forEach((nombre, i) => { const c = crit[i + 1] || {}; const n = `criterios[c${i + 1}]`; %>
+          <tr>
+            <td><%= i + 1 %>.0</td>
+            <td><%= nombre %></td>
+            <td><% if (ed) { %>
+              <select name="<%= n %>[nota]" data-nota aria-label="Calificación: <%= nombre %>">
+                <option value="">—</option>
+                <% for (let v = 10; v >= 1; v -= 1) { %><option value="<%= v %>" <%= c.nota === v ? 'selected' : '' %>><%= v %></option><% } %>
+                <option value="NA" <%= c.nota === null ? 'selected' : '' %>>N/A</option>
+              </select>
+            <% } else { %><strong><%= c.nota === null ? 'N/A' : (c.nota ?? '—') %></strong><% } %></td>
+            <td><% if (ed) { %><input type="text" name="<%= n %>[comentario]" value="<%= c.comentario || '' %>" aria-label="Comentario: <%= nombre %>" maxlength="1000"><% } else { %><span class="small"><%= c.comentario %></span><% } %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot><tr><td colspan="2" class="right">PROMEDIO FINAL OBTENIDO</td><td colspan="2"><strong id="promedio"><%= nota(ev.promedio) %></strong></td></tr></tfoot>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <h2>5. Resultado de la evaluación</h2>
+    <p class="small muted">Promedio de 8,0 a 10,0 = Aprobado · 6,0 a 7,9 = Aprobado con observaciones · menor a 6,0 = No aprobado.</p>
+    <div class="btn-row" id="resultado">
+      <% Object.entries(C.RESULTADOS_EVALUACION).forEach(([k, v]) => { %>
+        <span class="badge <%= ev.resultado === k ? C.ESTADOS_PROVEEDOR[k].clase : 'neutro' %>" data-resultado="<%= k %>" style="font-size:.9rem;padding:.35rem .8rem"><%= ev.resultado === k ? '☑' : '☐' %> <%= v.toUpperCase() %></span>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>6. Acciones requeridas</h2>
+    <div>
+      <% Object.entries(C.ACCIONES_EVALUACION).forEach(([k, v]) => {
+           const texto = k === 'reevaluar' ? (ev.meses_reevaluacion && acc.reevaluar ? `Reevaluar en ${ev.meses_reevaluacion} meses` : 'Reevaluar antes del plazo normal (los meses los define quien aprueba)') : v; %>
+        <% if (ed) { %><label class="check"><input type="checkbox" name="acciones[<%= k %>]" <%= acc[k] ? 'checked' : '' %>> <%= texto %></label>
+        <% } else { %><span class="check"><%= acc[k] ? '☑' : '☐' %> <%= texto %></span><% } %>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>7. Observaciones generales</h2>
+    <% if (ed) { %><textarea name="observaciones" aria-label="Observaciones generales" rows="4"><%= ev.observaciones %></textarea><% } else { %><p class="pre"><%= ev.observaciones || '—' %></p><% } %>
+  </section>
+
+  <section class="card">
+    <h2>8. Firmas</h2>
+    <div class="firmas">
+      <div class="firma ok"><b>Evaluador</b><%- icono('check') %> <%= ev.evaluador_nombre %><div class="muted small"><%= ev.evaluador_cargo %><%= ev.enviado_en ? ` · enviado ${fmt.fechaHora(ev.enviado_en)}` : ' · borrador' %></div></div>
+      <div class="firma <%= ev.aprobado_en ? 'ok' : '' %>"><b>Revisado / aprobado por</b>
+        <% if (ev.aprobado_en) { %><%- icono('check') %> <%= ev.aprobador_nombre %><div class="muted small"><%= ev.aprobador_cargo %> · <%= fmt.fechaHora(ev.aprobado_en) %></div><% } else { %><span class="muted">Pendiente (Gerencia General / Administración)</span><% } %></div>
+    </div>
+  </section>
+
+  <% if (ed) { %>
+    <div class="btn-row" style="margin-bottom:1.2rem">
+      <button class="btn grande" name="accion" value="enviar" data-confirm="¿Enviar la evaluación a aprobación de Gerencia General / Administración?">Enviar a aprobación →</button>
+      <button class="btn sec" name="accion" value="guardar">Guardar y seguir después</button>
+    </div>
+  <% } %>
+</form>
+
+<aside>
+  <section class="card">
+    <h3>Información de entrada</h3>
+    <p class="small muted">Incidencias desde la última evaluación aprobada<%= prov.fecha_evaluacion ? ` (${fmt.fecha(prov.fecha_evaluacion)})` : '' %>.</p>
+    <% if (!incidencias.length) { %><p class="small muted">Sin incidencias.</p><% } else { %>
+      <ul class="historial">
+        <% incidencias.forEach((i) => { %>
+          <li><div class="coment" style="margin-top:0"><%= i.descripcion %></div><div class="cuando"><%= fmt.fechaHora(i.fecha) %></div></li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+  <% if (ed) { %>
+    <form method="post" action="/proveedores/evaluaciones/<%= ev.id %>/descartar">
+      <%- csrf %><button class="btn sec chico" data-confirm="¿Descartar este borrador de evaluación?">Descartar borrador</button>
+    </form>
+  <% } %>
+</aside>
+</div>

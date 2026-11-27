@@ -1,0 +1,27 @@
+<%- include('_cabecera') %>
+
+<p style="margin:8px 0">Fecha de emisión: <strong><%= fmt.fecha(fmt.hoy()) %></strong> · Proveedores evaluados no retirados: <strong><%= proveedores.length %></strong></p>
+
+<table class="tabla-print">
+  <tr>
+    <th>N°</th><th>RAZÓN SOCIAL</th><th>NIT</th><th>CONTACTO PRINCIPAL</th><th>TIPO DE SUMINISTRO</th>
+    <th>CLASIFICACIÓN</th><th>FECHA DE EVALUACIÓN</th><th>RESULTADO</th><th>ESTADO</th>
+  </tr>
+  <% if (!proveedores.length) { %>
+    <tr><td colspan="9" class="center">No hay proveedores evaluados.</td></tr>
+  <% } %>
+  <% proveedores.forEach((pv, i) => { %>
+    <tr>
+      <td class="center"><%= i + 1 %></td>
+      <td><%= pv.razon_social %></td>
+      <td><%= pv.nit %></td>
+      <td><%= [pv.contacto, pv.telefono].filter(Boolean).join(' · ') %></td>
+      <td><%= pv.tipo_suministro %></td>
+      <td class="center"><%= C.CLASIFICACIONES[pv.clasificacion] %></td>
+      <td class="center"><%= fmt.fecha(pv.fecha_evaluacion) %></td>
+      <td class="center"><%= pv.promedio !== null ? Number(pv.promedio).toFixed(2).replace('.', ',') : '' %></td>
+      <td class="center"><%= C.ESTADOS_PROVEEDOR[pv.estado].nombre %></td>
+    </tr>
+  <% }) %>
+</table>
+<p style="font-size:9.5px;margin-top:6px">Resultado: 8,0 a 10,0 Aprobado · 6,0 a 7,9 Aprobado con observaciones · menor a 6,0 No aprobado (RV.PCOM.02, 4.5).</p>

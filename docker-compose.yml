@@ -1,0 +1,52 @@
+services:
+  app:
+    build: .
+    container_name: proceso_compra_app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      TZ: America/La_Paz
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-proceso_compra}
+      DB_USER: ${DB_USER:-proceso_compra}
+      DB_PASSWORD: ${DB_PASSWORD:-cambia_esta_contrasena}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      UPLOADS_DIR: /app/uploads
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - uploads_data:/app/uploads
+      - logos_data:/app/public/img/logos
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: proceso_compra_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-proceso_compra}
+      POSTGRES_USER: ${DB_USER:-proceso_compra}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cambia_esta_contrasena}
+      TZ: America/La_Paz
+    # Solo accesible desde este equipo (pgAdmin/DBeaver local). La app móvil nunca se conecta a la BD.
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  uploads_data:
+  logos_data:

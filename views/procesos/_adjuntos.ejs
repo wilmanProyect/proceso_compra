@@ -1,0 +1,42 @@
+<% const finalizado = ['RECHAZADO', 'ANULADO', 'CERRADO_STOCK'].includes(p.estado); %>
+<div id="adjuntos">
+
+  <% if (!p.adjuntos.length) { %>
+    <p class="muted small">No hay documentos adjuntos.</p>
+  <% } else { %>
+    <div class="tabla-wrap">
+      <table class="tabla">
+        <thead><tr><th>Archivo</th><th>Etapa</th><th>Subido por</th><th>Fecha</th><th></th></tr></thead>
+        <tbody>
+          <% p.adjuntos.forEach((a) => { const verLinea = /^(application\/pdf|image\/)/.test(a.mime); %>
+            <tr>
+              <td><a href="/adjuntos/<%= a.id %><%= verLinea ? '?ver=1' : '' %>" target="_blank" rel="noopener"><%= a.nombre_original %></a>
+                <div class="muted small"><%= Math.max(1, Math.round(a.tamano / 1024)) %> KB</div></td>
+              <td class="small"><%= C.ETAPAS_ADJUNTO[a.etapa] || a.etapa %></td>
+              <td class="small"><%= a.usuario_nombre %></td>
+              <td class="small nowrap"><%= fmt.fechaHora(a.fecha) %></td>
+              <td>
+                <% if (String(a.usuario_id) === String(usuario.id) && !C.ESTADOS_FINALES.includes(p.estado)) { %>
+                  <form method="post" action="/adjuntos/<%= a.id %>/eliminar">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn sec chico" data-confirm="¿Eliminar este archivo?">Eliminar</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+  <% if (!finalizado) { %>
+    <form method="post" action="/procesos/<%= p.id %>/adjuntos" enctype="multipart/form-data" class="grid g3" style="margin-top:1rem;align-items:end">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div><label for="etapa">Etapa</label>
+        <% const etapaPaso = ['SOLICITUD', 'COTIZACION', 'ORDEN_COMPRA', 'RECEPCION', 'ENTREGA'][(locals.pasoVer || 1) - 1]; %>
+        <select id="etapa" name="etapa"><% Object.entries(C.ETAPAS_ADJUNTO).forEach(([k, v]) => { %><option value="<%= k %>" <%= k === etapaPaso ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
+      <div><label for="archivos-adj">Archivos</label><input type="file" id="archivos-adj" name="archivos" multiple required accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.xlsm,.csv,.txt,.zip"></div>
+      <div><button class="btn sec">Adjuntar</button></div>
+    </form>
+  <% } %>
+</div>

@@ -1,0 +1,28 @@
+<% if (!procesos.length) { %>
+  <p class="muted"><%= locals.vacio || 'No hay procesos para mostrar.' %></p>
+<% } else { %>
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Requerimiento</th><th>Unidad</th><th>Tipo</th><th>Detalle</th><th>Solicitante</th>
+          <th>Fecha</th><th>O.C.</th><th>Avance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% procesos.forEach((p) => { const est = C.ESTADOS[p.estado] || {}; %>
+          <tr class="fila-link" data-href="/procesos/<%= p.id %>">
+            <td class="nowrap"><a href="/procesos/<%= p.id %>"><strong><%= fmt.codigoRequerimiento(p) %></strong></a><div class="small muted">Gestión <%= p.gestion %></div></td>
+            <td><span class="chip-unidad"><%= p.unidad_nombre %></span></td>
+            <td class="small"><%= C.TIPOS_SOLICITUD[p.tipo_solicitud] %></td>
+            <td class="small"><%= p.primer_item %><% if (p.total_items > 1) { %> <span class="muted">(+<%= p.total_items - 1 %>)</span><% } %></td>
+            <td class="small"><%= p.solicitante_nombre %><div class="muted"><%= p.departamento_nombre %></div></td>
+            <td class="small nowrap"><%= fmt.fecha(p.fecha_solicitud) %></td>
+            <td class="small nowrap"><%= fmt.codigoOc(p) || '—' %></td>
+            <td style="min-width:170px"><span class="badge <%= est.clase %>"><%= est.nombre || p.estado %></span><%- include('mini-pasos', { proc: p }) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>

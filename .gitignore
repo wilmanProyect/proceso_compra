@@ -1,0 +1,8 @@
+node_modules/
+.env
+npm-debug.log*
+uploads/
+public/img/logos/
+
+# Respaldos de la base (contienen datos)
+respaldo*.sql

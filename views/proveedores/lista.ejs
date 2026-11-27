@@ -1,0 +1,72 @@
+<div class="page-head">
+  <div>
+    <h1>Proveedores</h1>
+    <p class="muted">Registro común para todas las unidades de negocio · Procedimiento RV.PCOM.02 Evaluación de Proveedores.</p>
+  </div>
+  <div class="btn-row">
+    <% if (puede('proveedores.gestionar')) { %><a class="btn" href="/proveedores/nuevo"><%- icono('plus') %> Nuevo proveedor</a><% } %>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2><%- icono('clipboard-check') %> Listado de Proveedores Aprobados</h2>
+    <form method="get" action="/proveedores/listado/imprimir" target="_blank" class="btn-row">
+      <% if (unidades.length > 1) { %>
+        <label class="sr-only" for="unidad-listado">Encabezado de la unidad</label>
+        <select id="unidad-listado" name="unidad" style="width:auto">
+          <% unidades.forEach((u) => { %><option value="<%= u.id %>"><%= u.nombre %></option><% }) %>
+        </select>
+      <% } %>
+      <button class="btn sec chico"><%- icono('printer') %> Imprimir / PDF</button>
+      <a class="btn sec chico" href="/proveedores/listado.csv"><%- icono('file-spreadsheet') %> Exportar a Excel</a>
+    </form>
+  </div>
+  <p class="small muted" style="margin:0">Incluye los proveedores evaluados que no fueron retirados (Aprobado, Aprobado con observaciones, No aprobado y Suspendido), con los campos mínimos del punto 4.9.</p>
+</section>
+
+<nav class="tabs" aria-label="Vistas" style="display:flex;gap:.3rem;border-bottom:1px solid var(--borde);margin-bottom:1rem;flex-wrap:wrap">
+  <% Object.entries(vistas).forEach(([k, v]) => { %>
+    <a href="/proveedores?vista=<%= k %>" class="btn <%= vista === k ? '' : 'sec' %> chico" <%= vista === k ? 'aria-current="page"' : '' %>><%= v.nombre %></a>
+  <% }) %>
+</nav>
+
+<form class="filtros" method="get" action="/proveedores" style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem">
+  <input type="hidden" name="vista" value="<%= vista %>">
+  <div style="min-width:240px"><label for="q">Buscar</label><input type="text" id="q" name="q" value="<%= filtros.q %>" placeholder="Nombre, NIT o suministro"></div>
+  <div><label for="clasificacion">Clasificación</label>
+    <select id="clasificacion" name="clasificacion"><option value="">Todas</option>
+      <% Object.entries(C.CLASIFICACIONES).forEach(([k, v]) => { %><option value="<%= k %>" <%= filtros.clasificacion === k ? 'selected' : '' %>><%= v %></option><% }) %>
+    </select></div>
+  <div><button class="btn sec" type="submit">Filtrar</button></div>
+</form>
+
+<section class="card">
+  <% if (!proveedores.length) { %>
+    <div class="vacio"><div class="grande"><%- icono('truck') %></div><p>No hay proveedores en esta vista.</p></div>
+  <% } else { %>
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <thead><tr><th>Proveedor</th><th>NIT</th><th>Suministra</th><th>Clasificación</th><th>Estado</th><th>Última evaluación</th><th>Próxima reevaluación</th></tr></thead>
+      <tbody>
+        <% proveedores.forEach((pv) => { const est = C.ESTADOS_PROVEEDOR[pv.estado]; const vencida = pv.proxima_reevaluacion && pv.proxima_reevaluacion <= hoy && pv.estado !== 'RETIRADO'; %>
+          <tr class="fila-link" data-href="/proveedores/<%= pv.id %>">
+            <td><a href="/proveedores/<%= pv.id %>"><strong><%= pv.razon_social %></strong></a>
+              <% if (pv.nombre_comercial) { %><div class="small muted"><%= pv.nombre_comercial %></div><% } %>
+              <% if (pv.ocasional) { %><span class="badge neutro">Ocasional</span><% } %>
+              <% if (pv.evaluacion_en_curso) { %><span class="badge <%= C.ESTADOS_EVALUACION[pv.evaluacion_en_curso].clase %>">Evaluación: <%= C.ESTADOS_EVALUACION[pv.evaluacion_en_curso].nombre.toLowerCase() %></span><% } %>
+              <% if (pv.incidencias_pendientes) { %><span class="badge pendiente"><%= pv.incidencias_pendientes %> incidencia(s)</span><% } %>
+            </td>
+            <td class="small nowrap"><%= pv.nit || '—' %></td>
+            <td class="small"><%= pv.tipo_suministro || '—' %></td>
+            <td class="small"><%= C.CLASIFICACIONES[pv.clasificacion] %></td>
+            <td><span class="badge <%= est.clase %>"><%= est.nombre %></span></td>
+            <td class="small nowrap"><% if (pv.fecha_evaluacion) { %><%= fmt.fecha(pv.fecha_evaluacion) %> · <strong><%= Number(pv.promedio).toFixed(2).replace('.', ',') %></strong><% } else { %>—<% } %></td>
+            <td class="small nowrap"><% if (pv.proxima_reevaluacion) { %><span class="<%= vencida ? 'badge rechazado' : '' %>"><%= fmt.fecha(pv.proxima_reevaluacion) %><%= vencida ? ' · vencida' : '' %></span><% } else { %>—<% } %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</section>

@@ -1,0 +1,26 @@
+<div class="page-head">
+  <div><h1>Roles y permisos</h1><p class="muted">Defina qué puede hacer y qué procesos puede ver cada rol. El rol Administrador siempre tiene todos los permisos.</p></div>
+</div>
+<form method="post" action="/admin/roles" class="card">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <thead>
+        <tr><th>Permiso</th><% roles.forEach((r) => { %><th class="center" style="text-align:center"><%= r.nombre %><div class="muted" style="text-transform:none"><%= r.usuarios %> usuario(s)</div></th><% }) %></tr>
+      </thead>
+      <tbody>
+        <% let grupo = null; permisos.forEach((pm) => { %>
+          <% if (pm.grupo !== grupo) { grupo = pm.grupo; %><tr><th colspan="<%= roles.length + 1 %>"><%= grupo %></th></tr><% } %>
+          <tr>
+            <td><%= pm.descripcion %><div class="muted small"><%= pm.codigo %></div></td>
+            <% roles.forEach((r) => { const admin = r.codigo === 'ADMIN'; %>
+              <td style="text-align:center"><input type="checkbox" name="permisos[r<%= r.id %>]" value="<%= pm.codigo %>" aria-label="<%= r.nombre %>: <%= pm.descripcion %>"
+                <%= r.permisos.includes(pm.codigo) ? 'checked' : '' %> <%= admin ? 'disabled' : '' %>></td>
+            <% }) %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div class="btn-row" style="margin-top:1rem"><button class="btn">Guardar permisos</button></div>
+</form>

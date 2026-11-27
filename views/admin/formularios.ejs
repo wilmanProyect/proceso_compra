@@ -1,0 +1,63 @@
+<div class="page-head">
+  <div>
+    <h1>Formularios electrónicos</h1>
+    <p class="muted">Registro de todos los formularios. De aquí salen los datos del encabezado (código, versión, título y fecha) de cada documento que genera el sistema.</p>
+  </div>
+  <a class="btn" href="/admin/formularios/nuevo<%= filtros.unidad ? `?unidad=${filtros.unidad}` : '' %>"><%- icono('plus') %> Nuevo formulario</a>
+</div>
+
+<form class="filtros" method="get" action="/admin/formularios" style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem">
+  <div style="min-width:220px"><label for="q">Buscar</label><input type="text" id="q" name="q" value="<%= filtros.q %>" placeholder="Código, título o proceso"></div>
+  <div><label for="unidad">Unidad</label>
+    <select id="unidad" name="unidad"><option value="">Todas</option>
+      <% unidades.forEach((u) => { %><option value="<%= u.id %>" <%= filtros.unidad === u.id ? 'selected' : '' %>><%= u.nombre %></option><% }) %></select></div>
+  <div><label for="tipo">Tipo de documento</label>
+    <select id="tipo" name="tipo"><option value="">Todos</option>
+      <% tipos.forEach((t) => { %><option value="<%= t.id %>" <%= filtros.tipo === t.id ? 'selected' : '' %>><%= t.nombre %></option><% }) %></select></div>
+  <div><label for="estado">Estado</label>
+    <select id="estado" name="estado"><option value="">Todos</option>
+      <% Object.entries(C.ESTADOS_FORMULARIO).forEach(([k, v]) => { %><option value="<%= k %>" <%= filtros.estado === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
+  <div><button class="btn sec">Filtrar</button></div>
+</form>
+
+<section class="card">
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <thead><tr><th>Ítem</th><th>Tipo de documento</th><th>Proceso/Área</th><th>Código</th><th>Versión</th><th>Título del documento</th><th>Fecha</th><th>Estado</th><th>Último cambio</th></tr></thead>
+      <tbody>
+        <% formularios.forEach((f, i) => { %>
+          <tr class="fila-link" data-href="/admin/formularios/<%= f.id %>">
+            <td><%= i + 1 %></td>
+            <td class="small"><%= f.tipo_nombre || '—' %></td>
+            <td class="small"><%= f.proceso_area %></td>
+            <td class="nowrap"><a href="/admin/formularios/<%= f.id %>"><strong><%= f.codigo %></strong></a>
+              <% if (f.repetidos > 1) { %><div><span class="badge pendiente" title="Otro formulario de la misma unidad usa este código">Código repetido</span></div><% } %></td>
+            <td class="center"><%= f.version %></td>
+            <td><%= f.titulo %><% if (f.clave) { %><div class="small muted">Lo usa el sistema · <%= f.unidad_nombre %></div><% } else { %><div class="small muted"><%= f.unidad_nombre %></div><% } %></td>
+            <td class="small nowrap"><%= fmt.fecha(f.fecha) %></td>
+            <td><span class="badge <%= f.estado === 'APROBADO' ? 'cerrado' : 'pendiente' %>"><%= C.ESTADOS_FORMULARIO[f.estado] %></span></td>
+            <td class="small"><%= f.ultimo_usuario || '—' %><div class="muted"><%= fmt.fechaHora(f.ultimo_cambio) %></div></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card" id="tipos">
+  <h2>Tipos de documento</h2>
+  <p class="small muted">Lista desplegable del campo "Tipo de documento" (Tabla N°1).</p>
+  <div class="btn-row" style="margin-bottom:.8rem">
+    <% tipos.forEach((t) => { %>
+      <form method="post" action="/admin/formularios/tipos/<%= t.id %>" style="display:inline">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="activo" value="<%= t.activo ? '0' : '1' %>">
+        <button class="btn sec chico" title="<%= t.activo ? 'Desactivar' : 'Activar' %>"><%= t.nombre %> · <%= t.activo ? 'activo' : 'inactivo' %></button>
+      </form>
+    <% }) %>
+  </div>
+  <form method="post" action="/admin/formularios/tipos" class="btn-row">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="text" name="nombre" placeholder="Nuevo tipo de documento" aria-label="Nuevo tipo de documento" style="max-width:280px" required maxlength="60">
+    <button class="btn sec">Agregar</button>
+  </form>
+</section>

@@ -1,0 +1,37 @@
+<%
+  const caja = (ok) => `<span class="caja">${ok ? 'X' : ''}</span>`;
+%>
+<%- include('_cabecera') %>
+
+<div class="seccion">1. DATOS GENERALES</div>
+<table>
+  <tr><td class="etq">FECHA DE RECEPCIÓN:</td><td><%= fmt.fecha(p.rec_fecha) %></td><td class="etq">N° DE ORDEN DE COMPRA (Cuando aplique):</td><td><%= fmt.codigoOc(p) %></td></tr>
+  <tr><td class="etq">PROVEEDOR:</td><td><%= p.seleccionada ? p.seleccionada.proveedor : '' %></td><td class="etq">N° DE FACTURA O RECIBO:</td><td><%= p.rec_nro_factura %></td></tr>
+  <tr><td class="etq">TIPO DE BIEN:</td><td colspan="3">
+    <% Object.entries(C.TIPOS_BIEN).forEach(([k, v]) => { %><%= v %> <%- caja(p.rec_tipo_bien === k) %> &nbsp; <% }) %></td></tr>
+</table>
+
+<div class="seccion">2. DETALLE DE LA RECEPCIÓN</div>
+<table>
+  <tr><th>N°</th><th>DESCRIPCIÓN / ESPECIFICACIONES TÉCNICAS</th><th>CÓDIGO / N° DE SERIE</th><th>MODELO</th><th>CANTIDAD</th><th>UNIDAD</th><th>ESTADO DE INSPECCIÓN</th><th>OBSERVACIONES</th></tr>
+  <% p.items.forEach((it) => { %>
+    <tr><td class="center"><%= it.nro %></td><td><%= it.descripcion %></td><td><%= it.rec_codigo_serie %></td><td><%= it.rec_modelo %></td>
+      <td class="center"><%= fmt.cantidad(it.rec_cantidad) %></td><td class="center"><%= it.unidad %></td><td><%= it.rec_estado %></td><td><%= it.rec_observaciones %></td></tr>
+  <% }) %>
+  <tr><td colspan="8" class="center" style="background:#d9dcda;font-weight:700">Adjuntar la proforma, factura, recibo o el documento emitido por el proveedor para la entrega de la compra realizada</td></tr>
+</table>
+
+<div class="seccion">3. VERIFICACIÓN</div>
+<table><tr><td>
+  Cantidad conforme <%- caja(p.rec_cantidad_ok) %> Estado físico conforme <%- caja(p.rec_estado_ok) %>
+  Documentación conforme <%- caja(p.rec_documentacion_ok) %> Accesorios completos <%- caja(p.rec_accesorios_ok) %>
+  Especificaciones verificadas <%- caja(p.rec_especificaciones_ok) %>
+</td></tr></table>
+
+<div class="seccion">4. COMENTARIOS</div>
+<div class="pre" style="border:1px solid #333;padding:6px;min-height:36px"><%= p.rec_comentarios %></div>
+
+<div class="seccion">5. FIRMAS</div>
+<div class="firmas-print" style="grid-template-columns:minmax(0,1fr);max-width:50%">
+  <%- include('_firma', { clave: 'RECEPCION.RECEPCIONADO', titulo: 'RECEPCIONADO E INSPECCIONADO POR', cargo: null }) %>
+</div>

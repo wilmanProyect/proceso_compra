@@ -1,0 +1,12 @@
+<div id="historial">
+
+  <ul class="historial">
+    <% p.eventos.slice().reverse().forEach((e) => { %>
+      <li>
+        <div><strong><%= e.accion %></strong></div>
+        <div class="cuando"><%= e.usuario_nombre || 'Sistema' %> · <%= fmt.fechaHora(e.fecha) %></div>
+        <% if (e.comentario) { %><div class="coment"><%= e.comentario %></div><% } %>
+      </li>
+    <% }) %>
+  </ul>
+</div>

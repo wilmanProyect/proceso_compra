@@ -1,0 +1,122 @@
+<%
+  const d = datos || {};
+  const items = (d.items && d.items.length) ? d.items : [{}];
+  const tipoSel = d.tipo_solicitud || '';
+  const tipos = [
+    ['COMPRA', 'shopping-cart', 'Compra', 'Bienes, materiales o insumos'],
+    ['SERVICIO', 'wrench', 'Servicio', 'Mantenimiento, reparación, consultoría…'],
+    ['EQUIPO_TECNOLOGICO', 'laptop', 'Equipo tecnológico', 'Computadoras, impresoras, redes… (Acta)'],
+  ];
+%>
+<div class="page-head">
+  <div><h1>Nueva solicitud</h1><p class="muted">Paso 1 del proceso de compra. Completa los datos en 4 partes simples.</p></div>
+</div>
+
+<% if (!unidades.length) { %>
+  <div class="alert aviso">No tienes unidades de negocio asignadas. Pide al administrador que te asigne al menos una.</div>
+<% } else { %>
+<ol class="asistente-nav" id="asistente-nav">
+  <li data-ir="1"><b>1</b><span>Unidad</span></li>
+  <li data-ir="2"><b>2</b><span>¿Qué necesitas?</span></li>
+  <li data-ir="3"><b>3</b><span>Detalle</span></li>
+  <li data-ir="4"><b>4</b><span>Revisar y enviar</span></li>
+</ol>
+
+<div class="alert error hidden" id="errores-asistente" role="alert"></div>
+
+<form method="post" action="/procesos" enctype="multipart/form-data" id="form-solicitud" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <section class="card paso-asistente" data-paso="1">
+    <h2>1. ¿Para qué unidad de negocio es?</h2>
+    <p class="muted small">El proceso usará el logo, los códigos y la numeración de esta unidad.</p>
+    <div class="opciones">
+      <% unidades.forEach((u, i) => { %>
+        <label class="opcion">
+          <input type="radio" name="unidad_id" value="<%= u.id %>" required data-nombre="<%= u.nombre %>" <%= String(d.unidad_id) === String(u.id) || (unidades.length === 1 && i === 0) ? 'checked' : '' %>>
+          <span><% if (u.logo) { %><img src="/img/<%= u.logo %>" alt=""><% } %><%= u.nombre %></span>
+        </label>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="card paso-asistente" data-paso="2">
+    <h2>2. ¿Qué necesitas?</h2>
+    <div class="opciones" style="margin-bottom:1.2rem">
+      <% tipos.forEach(([k, ico, nombre, desc]) => { %>
+        <label class="opcion">
+          <input type="radio" name="tipo_solicitud" value="<%= k %>" required data-nombre="<%= nombre %>" <%= tipoSel === k ? 'checked' : '' %>>
+          <span><span class="icono"><%- icono(ico) %></span><%= nombre %><small><%= desc %></small></span>
+        </label>
+      <% }) %>
+    </div>
+    <div class="grid g3">
+      <div>
+        <label for="departamento_id">Tu departamento / área *</label>
+        <select id="departamento_id" name="departamento_id" required>
+          <option value="">Elige la unidad primero</option>
+          <% departamentos.forEach((dep) => { %>
+            <option value="<%= dep.id %>" data-unidad="<%= dep.unidad_id %>" <%= String(d.departamento_id) === String(dep.id) ? 'selected' : '' %>><%= dep.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label for="prioridad">¿Qué tan urgente es?</label>
+        <select id="prioridad" name="prioridad">
+          <% Object.entries(C.PRIORIDADES).forEach(([k, v]) => { %><option value="<%= k %>" <%= (d.prioridad || 'MEDIA') === k ? 'selected' : '' %>><%= v %></option><% }) %>
+        </select>
+      </div>
+      <div>
+        <label for="monto_estimado">¿Cuánto crees que costará? (Bs)</label>
+        <input type="number" id="monto_estimado" name="monto_estimado" min="0" step="0.01" value="<%= d.monto_estimado || '' %>" placeholder="Opcional">
+        <div class="ayuda" id="ayuda-cotizaciones">Sirve para saber cuántas cotizaciones se necesitan.</div>
+      </div>
+    </div>
+    <div style="margin-top:1rem">
+      <label class="check" id="campo-requiere-oc"><input type="checkbox" name="requiere_oc" <%= d.requiere_oc ? 'checked' : '' %>> Es un producto crítico o un activo fijo (lleva orden de compra)</label>
+      <label class="check"><input type="checkbox" name="existe_stock" id="existe_stock" <%= d.existe_stock ? 'checked' : '' %>> Ya existe en almacén (stock)</label>
+    </div>
+    <div class="alert aviso hidden" id="aviso-stock" style="margin-top:1rem">
+      Si existe en stock no hace falta comprar: la solicitud quedará como <strong>atendida con stock</strong> y la entrega se coordina con el Coordinador Adm. y RRHH.
+    </div>
+    <div class="grid g2 solo-tecnologico" style="margin-top:1rem">
+      <div class="span-all"><label for="motivo">¿Por qué se necesita el equipo? *</label><textarea id="motivo" name="motivo"><%= d.motivo || '' %></textarea></div>
+      <div><label for="area_receptora">Área que recibirá el equipo</label><input type="text" id="area_receptora" name="area_receptora" value="<%= d.area_receptora || '' %>"></div>
+    </div>
+  </section>
+
+  <section class="card paso-asistente" data-paso="3">
+    <h2>3. Detalle de lo que necesitas</h2>
+    <p class="muted small">Agrega un ítem por cada cosa distinta.</p>
+    <div id="lista-items">
+      <% items.forEach((it, i) => { %><%- include('_fila-item', { it, i }) %><% }) %>
+    </div>
+    <template id="plantilla-item"><%- include('_fila-item', { it: {}, i: '__i__' }) %></template>
+    <button type="button" class="btn sec" id="agregar-item"><%- icono('plus') %> Agregar otro ítem</button>
+  </section>
+
+  <section class="card paso-asistente" data-paso="4">
+    <h2>4. Revisa y envía</h2>
+    <dl class="datos resumen-solicitud" id="resumen" style="margin-bottom:1rem"></dl>
+    <div id="resumen-items" class="small" style="margin-bottom:1rem"></div>
+    <div class="grid g2">
+      <div><label for="comentarios">Comentarios o justificación (opcional)</label><textarea id="comentarios" name="comentarios"><%= d.comentarios || '' %></textarea></div>
+      <div>
+        <label for="archivos">Adjuntar archivos (opcional)</label>
+        <input type="file" id="archivos" name="archivos" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.xlsm,.csv,.txt,.zip">
+        <div class="ayuda">Proformas, fotos, especificaciones. Hasta 10 archivos de 15 MB.</div>
+      </div>
+    </div>
+    <div class="alert info small" style="margin-top:1rem">Al enviar, la solicitud pasa a <strong>Gerencia</strong> para la revisión presupuestaria.</div>
+  </section>
+
+  <div class="asistente-botones">
+    <button type="button" class="btn sec" id="btn-atras">← Atrás</button>
+    <div class="btn-row">
+      <a class="btn sec" href="/procesos">Cancelar</a>
+      <button type="button" class="btn grande" id="btn-siguiente">Siguiente →</button>
+      <button type="submit" class="btn grande" id="btn-enviar"><%- icono('check') %> Enviar solicitud</button>
+    </div>
+  </div>
+</form>
+<% } %>

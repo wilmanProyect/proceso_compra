@@ -1,0 +1,56 @@
+<%
+  const r = registro;
+  const mostrar = (campo, valor) => {
+    if (campo === 'tipo_documento_id') return tipoTexto[String(valor)] || valor || '—';
+    if (campo === 'estado') return C.ESTADOS_FORMULARIO[valor] || valor || '—';
+    if (campo === 'fecha') return fmt.fecha(valor) || '—';
+    return valor === '' || valor === null || valor === undefined ? '—' : valor;
+  };
+%>
+<div class="page-head">
+  <div><h1><%= title %></h1>
+    <% if (clave) { %><p class="muted">Este formulario lo usa el sistema (<%= C.FORMULARIOS[clave] || clave %>): su encabezado sale de aquí.</p><% } %></div>
+  <a class="btn sec" href="/admin/formularios">Volver</a>
+</div>
+
+<div class="grid g2" style="align-items:start">
+<form method="post" action="<%= id ? `/admin/formularios/${id}` : '/admin/formularios/nuevo' %>" class="card">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="grid g2">
+    <div class="span-all"><label for="unidad_id">Unidad de negocio</label>
+      <% if (id) { %><div><strong><%= (unidades.find((u) => u.id === r.unidad_id) || {}).nombre %></strong></div>
+      <% } else { %><select id="unidad_id" name="unidad_id" required><option value="">Elegir…</option>
+        <% unidades.forEach((u) => { %><option value="<%= u.id %>" <%= Number(r.unidad_id) === u.id ? 'selected' : '' %>><%= u.nombre %> (<%= u.sigla %>)</option><% }) %></select><% } %></div>
+    <div><label for="tipo_documento_id">Tipo de documento *</label>
+      <select id="tipo_documento_id" name="tipo_documento_id" required><option value="">Elegir…</option>
+        <% tipos.filter((t) => t.activo || t.id === Number(r.tipo_documento_id)).forEach((t) => { %><option value="<%= t.id %>" <%= Number(r.tipo_documento_id) === t.id ? 'selected' : '' %>><%= t.nombre %></option><% }) %></select></div>
+    <div><label for="proceso_area">Proceso / Área</label><input type="text" id="proceso_area" name="proceso_area" value="<%= r.proceso_area || '' %>" maxlength="120" placeholder="Ej.: Compras"></div>
+    <div><label for="codigo">Código *</label><input type="text" id="codigo" name="codigo" value="<%= r.codigo || '' %>" required maxlength="40" placeholder="Ej.: RV.FPRO.01.2" style="text-transform:uppercase"></div>
+    <div><label for="version">Versión *</label><input type="text" id="version" name="version" value="<%= r.version ?? '' %>" required maxlength="10" placeholder="Ej.: 0"></div>
+    <div class="span-all"><label for="titulo">Título del documento * <span class="muted">(en mayúsculas)</span></label>
+      <input type="text" id="titulo" name="titulo" value="<%= r.titulo || '' %>" required maxlength="200" placeholder="Ej.: PROGRAMA MAESTRO DE CAMPAÑA AGRÍCOLA" style="text-transform:uppercase"></div>
+    <div><label for="fecha">Fecha *</label><input type="date" id="fecha" name="fecha" value="<%= fmt.fechaInput(r.fecha) %>" required></div>
+    <div><label for="estado">Estado</label>
+      <select id="estado" name="estado"><% Object.entries(C.ESTADOS_FORMULARIO).forEach(([k, v]) => { %><option value="<%= k %>" <%= r.estado === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
+  </div>
+  <p class="ayuda">El encabezado de los documentos muestra: título, Código, Versión y Fecha. Está prohibido modificar el encabezado fuera de este registro.</p>
+  <div class="btn-row" style="margin-top:1rem"><button class="btn grande"><%- icono('check') %> Guardar</button></div>
+</form>
+
+<section class="card">
+  <h2>Historial de actualizaciones</h2>
+  <% if (!historial.length) { %><p class="muted small">Sin cambios registrados.</p><% } else { %>
+  <ul class="historial">
+    <% historial.forEach((h) => { %>
+      <li>
+        <div><strong><%= h.accion === 'CREADO' ? 'Creado' : 'Modificado' %></strong> · <%= h.usuario_nombre %></div>
+        <div class="cuando"><%= fmt.fechaHora(h.fecha) %></div>
+        <% const cambios = Object.entries(h.cambios || {}); if (cambios.length) { %>
+          <div class="coment"><% cambios.forEach(([campo, [antes, despues]]) => { %><div><strong><%= nombresCampo[campo] || campo %>:</strong> <%= mostrar(campo, antes) %> → <%= mostrar(campo, despues) %></div><% }) %></div>
+        <% } %>
+      </li>
+    <% }) %>
+  </ul>
+  <% } %>
+</section>
+</div>

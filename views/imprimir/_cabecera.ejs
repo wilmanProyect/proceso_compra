@@ -1,0 +1,18 @@
+<%
+  // Encabezado normado (documento "Formatos de encabezados"): logo · TÍTULO · Código / Versión / Fecha.
+  // Los datos salen del módulo Formularios electrónicos de la unidad.
+  const unidadCab = locals.cabUnidad || p;
+  const titulo = (form.titulo || tituloDoc || '').toUpperCase();
+%>
+<table class="cab">
+  <tr>
+    <td class="logo"><% if (unidadCab.logo) { %><img src="/img/<%= unidadCab.logo %>" alt="<%= unidadCab.unidad_nombre %>"><% } else { %><strong><%= unidadCab.unidad_nombre %></strong><% } %></td>
+    <td class="titulo"><%= titulo %></td>
+    <td class="codigo">
+      Código: <strong><%= form.codigo %></strong><br>
+      Versión: <%= form.version ?? form.revision %><br>
+      Fecha: <%= fmt.fecha(form.fecha) %>
+      <% if (form.estado === 'EN_REVISION') { %><br><strong style="color:#b91c1c">EN REVISIÓN</strong><% } %>
+    </td>
+  </tr>
+</table>

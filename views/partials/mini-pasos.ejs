@@ -1,0 +1,5 @@
+<% const lp = calcularPasos(proc); const est = C.ESTADOS[proc.estado] || {}; %>
+<div class="mini-pasos" title="<%= lp.map((x) => `${x.n}. ${x.corto}: ${x.estado.replace('_', ' ')}`).join(' · ') %>" aria-hidden="true">
+  <% lp.forEach((x) => { %><i class="<%= x.estado %>"></i><% }) %>
+</div>
+<div class="small muted"><%= est.paso && est.paso <= 5 ? `Paso ${est.paso} de 5 · ${lp[est.paso - 1].corto}` : est.nombre %></div>

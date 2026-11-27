@@ -1,0 +1,134 @@
+<%
+  const montoTexto = (p) => {
+    if (p.total_adjudicado) return `${p.moneda === 'USD' ? '$us' : 'Bs'} ${fmt.dinero(p.total_adjudicado)}`;
+    if (p.monto_estimado) return `Bs ${fmt.dinero(p.monto_estimado)} (estimado)`;
+    return '';
+  };
+  // Aprobaciones que se pueden hacer directamente desde aquí
+  const rapidas = {
+    PENDIENTE_APROBACION: { bandera: 'aprobarSolicitud', ruta: 'aprobar-solicitud', ok: 'Aprobar', no: 'Rechazar', noValor: 'rechazar', pregunta: 'Motivo del rechazo' },
+    COTIZACION_POR_APROBAR: { bandera: 'aprobarCuadro', ruta: 'aprobar-cuadro', ok: 'Aprobar cuadro', no: 'Devolver con observaciones', noValor: 'observar', pregunta: 'Observaciones' },
+    OC_POR_AUTORIZAR: { bandera: 'autorizarOc', ruta: 'autorizar-oc', ok: 'Autorizar O.C.', no: 'Devolver con observaciones', noValor: 'observar', pregunta: 'Observaciones' },
+  };
+  const csrf = `<input type="hidden" name="_csrf" value="${csrfToken}"><input type="hidden" name="volver" value="inicio">`;
+  const tp = tareasProveedores;
+  const totalTareas = tareas.length + tp.porAprobar.length + tp.devueltas.length + tp.vencidos.length;
+%>
+<div class="page-head">
+  <div>
+    <h1>Hola, <%= usuario.nombre.split(' ')[0] %></h1>
+    <p class="muted"><%= totalTareas ? `Tienes ${totalTareas} tarea(s) pendiente(s).` : 'No tienes tareas pendientes.' %></p>
+  </div>
+  <% if (puede('procesos.crear')) { %><a class="btn grande" href="/procesos/nuevo"><%- icono('plus') %> Nueva solicitud</a><% } %>
+</div>
+
+<section style="margin-bottom:1.6rem">
+  <h2><%- icono('list-checks') %> Mis tareas</h2>
+  <% if (!totalTareas) { %>
+    <div class="card vacio"><div class="grande"><%- icono('circle-check') %></div><p>Todo al día. Cuando alguien necesite tu aprobación o tu trabajo, aparecerá aquí.</p></div>
+  <% } else if (tareas.length) { %>
+  <div class="tareas">
+    <% tareas.forEach((p) => {
+         const est = C.ESTADOS[p.estado];
+         const tarea = p.tipo_solicitud === 'SERVICIO' && est.tareaServicio ? est.tareaServicio : est.tarea;
+         const r = rapidas[p.estado];
+         const rapida = r && p.acciones[r.bandera];
+         const monto = montoTexto(p); %>
+      <article class="tarea">
+        <div>
+          <div class="small muted"><span class="chip-unidad"><%= p.unidad_nombre %></span> · Paso <%= est.paso %> de 5</div>
+          <div class="que"><%= tarea %></div>
+          <div class="detalle">
+            <a href="/procesos/<%= p.id %>"><strong><%= fmt.codigoRequerimiento(p) %></strong></a>
+            · <%= p.primer_item %><% if (p.total_items > 1) { %> (+<%= p.total_items - 1 %>)<% } %>
+            · Solicitó <%= p.solicitante_nombre %>
+            <% if (p.proveedor_adjudicado) { %> · Proveedor: <%= p.proveedor_adjudicado %><% } %>
+            <% if (monto) { %> · <strong><%= monto %></strong><% } %>
+          </div>
+        </div>
+        <div class="botones">
+          <% if (rapida) { %>
+            <form method="post" action="/procesos/<%= p.id %>/<%= r.ruta %>">
+              <%- csrf %><button class="btn" name="decision" value="aprobar" data-confirm="¿<%= r.ok %> <%= fmt.codigoRequerimiento(p) %>?"><%- icono('check') %> <%= r.ok %></button>
+            </form>
+            <a class="btn sec" href="/procesos/<%= p.id %>">Ver detalle</a>
+          <% } else { %>
+            <a class="btn" href="/procesos/<%= p.id %>">Hacerlo ahora →</a>
+          <% } %>
+        </div>
+        <% if (rapida) { %>
+          <details>
+            <summary><%= r.no %></summary>
+            <form method="post" action="/procesos/<%= p.id %>/<%= r.ruta %>" class="grid" style="margin-top:.5rem">
+              <%- csrf %>
+              <textarea name="comentario" aria-label="<%= r.pregunta %>" placeholder="<%= r.pregunta %> (obligatorio)" required></textarea>
+              <div><button class="btn peligro chico" name="decision" value="<%= r.noValor %>"><%= r.no %></button></div>
+            </form>
+          </details>
+        <% } %>
+      </article>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <% if (tp.porAprobar.length || tp.devueltas.length || tp.vencidos.length) { %>
+  <div class="tareas" style="margin-top:.8rem">
+    <% tp.porAprobar.forEach((e) => { %>
+      <article class="tarea">
+        <div>
+          <div class="small muted">Proveedores · Evaluación <%= C.TIPOS_TIPO_EVALUACION[e.tipo].toLowerCase() %></div>
+          <div class="que">Aprobar la evaluación de <%= e.razon_social %></div>
+          <div class="detalle">Promedio <strong><%= Number(e.promedio).toFixed(2).replace('.', ',') %></strong> · <%= C.RESULTADOS_EVALUACION[e.resultado] %> · Evaluó <%= e.evaluador_nombre %> el <%= fmt.fecha(e.fecha_evaluacion) %></div>
+        </div>
+        <div class="botones"><a class="btn" href="/proveedores/evaluaciones/<%= e.id %>#aprobar">Revisar y aprobar →</a></div>
+      </article>
+    <% }) %>
+    <% tp.devueltas.forEach((e) => { %>
+      <article class="tarea">
+        <div>
+          <div class="small muted">Proveedores · Evaluación devuelta</div>
+          <div class="que">Corregir la evaluación de <%= e.razon_social %></div>
+          <div class="detalle">Observación: <%= e.observacion_aprobador %></div>
+        </div>
+        <div class="botones"><a class="btn" href="/proveedores/evaluaciones/<%= e.id %>">Corregir →</a></div>
+      </article>
+    <% }) %>
+    <% tp.vencidos.forEach((pv) => { %>
+      <article class="tarea">
+        <div>
+          <div class="small muted">Proveedores · <%= C.CLASIFICACIONES[pv.clasificacion] %></div>
+          <div class="que">Reevaluar a <%= pv.razon_social %></div>
+          <div class="detalle">La reevaluación venció el <strong><%= fmt.fecha(pv.proxima_reevaluacion) %></strong> · Estado actual: <%= C.ESTADOS_PROVEEDOR[pv.estado].nombre %></div>
+        </div>
+        <div class="botones"><a class="btn" href="/proveedores/<%= pv.id %>#evaluar">Evaluar ahora →</a></div>
+      </article>
+    <% }) %>
+  </div>
+  <% } %>
+</section>
+
+<% if (enCurso.length) { %>
+<section class="card">
+  <div class="card-head"><h2><%- icono('package') %> Mis solicitudes en curso</h2><a class="small" href="/procesos?vista=mios">Ver todas</a></div>
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <tbody>
+        <% enCurso.forEach((p) => { const est = C.ESTADOS[p.estado]; %>
+          <tr class="fila-link" data-href="/procesos/<%= p.id %>">
+            <td><a href="/procesos/<%= p.id %>"><strong><%= fmt.codigoRequerimiento(p) %></strong></a><div class="small muted"><%= p.primer_item %></div></td>
+            <td style="min-width:160px"><%- include('partials/mini-pasos', { proc: p }) %></td>
+            <td class="small"><%= est.quien ? `Esperando a: ${est.quien}` : est.nombre %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+<% } %>
+
+<div class="stats">
+  <a class="stat destacado" href="/procesos?vista=pendientes"><strong><%= resumen.pendientes %></strong><span>Pendientes de mi acción</span></a>
+  <a class="stat" href="/procesos"><strong><%= resumen.en_curso %></strong><span>Procesos en curso</span></a>
+  <a class="stat" href="/procesos?estado=CERRADO"><strong><%= resumen.cerrados %></strong><span>Cerrados</span></a>
+  <a class="stat" href="/procesos"><strong><%= resumen.total %></strong><span>Total visibles</span></a>
+</div>

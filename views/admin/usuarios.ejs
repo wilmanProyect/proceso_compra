@@ -1,0 +1,25 @@
+<div class="page-head">
+  <div><h1>Usuarios</h1><p class="muted">Cada usuario tiene un rol y una o varias unidades de negocio asignadas.</p></div>
+  <a class="btn" href="/admin/usuarios/nuevo">+ Nuevo usuario</a>
+</div>
+<section class="card">
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <thead><tr><th>Nombre</th><th>Usuario</th><th>Cargo</th><th>Rol</th><th>Unidades</th><th>Último acceso</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <% lista.forEach((u) => { %>
+          <tr>
+            <td><strong><%= u.nombre %></strong><div class="muted small"><%= u.email %></div></td>
+            <td><%= u.usuario %></td>
+            <td class="small"><%= u.cargo %></td>
+            <td class="small"><%= u.rol_nombre %></td>
+            <td class="small"><%= u.unidades || '—' %></td>
+            <td class="small nowrap"><%= fmt.fechaHora(u.ultimo_acceso) || 'Nunca' %></td>
+            <td><span class="badge <%= u.activo ? 'cerrado' : 'rechazado' %>"><%= u.activo ? 'Activo' : 'Inactivo' %></span></td>
+            <td><a class="btn sec chico" href="/admin/usuarios/<%= u.id %>">Editar</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

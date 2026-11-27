@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#183c32">
+    <title><%= title %> | Proceso de Compras</title>
+    <link rel="stylesheet" href="/css/estilos.css">
+    <script>document.documentElement.classList.add('js');</script>
+  </head>
+  <body>
+    <a class="saltar" href="#contenido">Saltar al contenido</a>
+    <% if (locals.usuario) {
+         const enlace = (href, ico, texto, activo, extra = '') => `<a href="${href}" class="${activo ? 'activo' : ''}"${activo ? ' aria-current="page"' : ''}>${icono(ico)}<span>${texto}</span>${extra}</a>`;
+         const pend = locals.pendientesMenu || 0;
+    %>
+    <div class="topbar">
+      <button type="button" id="abrir-menu" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar"><%- icono('menu') %></button>
+      <strong>Proceso de Compras</strong>
+    </div>
+    <div class="velo" id="velo"></div>
+    <div class="app">
+      <aside class="sidebar" id="sidebar" aria-label="Menú principal">
+        <a class="brand" href="/"><span class="brand-mark">PC</span><span>Proceso de Compras</span></a>
+        <nav class="menu">
+          <%- enlace('/', 'list-checks', 'Mis tareas', ruta === '/', pend ? `<span class="contador"><span class="sr-only">, </span>${pend}<span class="sr-only"> pendientes</span></span>` : '') %>
+          <% if (puede('procesos.crear')) { %><%- enlace('/procesos/nuevo', 'plus', 'Nueva solicitud', ruta === '/procesos/nuevo') %><% } %>
+          <%- enlace('/procesos', 'clipboard-list', 'Procesos de compra', ruta.startsWith('/procesos') && ruta !== '/procesos/nuevo') %>
+          <% if (puede('proveedores.ver')) { %><%- enlace('/proveedores', 'truck', 'Proveedores', ruta.startsWith('/proveedores')) %><% } %>
+          <% if (puede('admin.usuarios') || puede('admin.unidades') || puede('admin.roles') || puede('admin.formularios')) { %>
+            <div class="menu-titulo" role="presentation">Administración</div>
+            <% if (puede('admin.usuarios')) { %><%- enlace('/admin/usuarios', 'users', 'Usuarios', ruta.startsWith('/admin/usuarios')) %><% } %>
+            <% if (puede('admin.unidades')) { %><%- enlace('/admin/unidades', 'building-2', 'Unidades de negocio', ruta.startsWith('/admin/unidades')) %><% } %>
+            <% if (puede('admin.formularios')) { %><%- enlace('/admin/formularios', 'files', 'Formularios', ruta.startsWith('/admin/formularios')) %><% } %>
+            <% if (puede('admin.roles')) { %><%- enlace('/admin/roles', 'shield-check', 'Roles y permisos', ruta.startsWith('/admin/roles')) %><% } %>
+          <% } %>
+        </nav>
+        <div class="usuario-box">
+          <strong><%= usuario.nombre %></strong>
+          <span><%= usuario.rol_nombre %></span>
+          <div class="enlaces">
+            <a href="/cuenta/password">Mi cuenta</a>
+            <form method="post" action="/logout">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit">Salir</button>
+            </form>
+          </div>
+        </div>
+      </aside>
+      <main class="contenido" id="contenido" tabindex="-1">
+        <%- include('../partials/flash') %>
+        <%- body %>
+      </main>
+    </div>
+    <% } else { %>
+      <main class="contenido" id="contenido" tabindex="-1" style="margin:auto">
+        <%- include('../partials/flash') %>
+        <%- body %>
+      </main>
+    <% } %>
+    <script src="/js/app.js" defer></script>
+  </body>
+</html>
